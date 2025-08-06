@@ -1,0 +1,78 @@
+/* Light Theme */
+.light-theme {
+    --table-bg: #fff;
+    --table-text: #222;
+    --table-border: #ddd;
+    --btn-action-color: #007bff;
+    --btn-action-hover: #0056b3;
+}
+
+/* Dark Theme */
+.dark-theme {
+    --table-bg: #1f1f2f;
+    --table-text: #ddd;
+    --table-border: #444;
+    --btn-action-color: #66aaff;
+    --btn-action-hover: #4477cc;
+}
+
+/* Table styling */
+.light-theme table,
+.dark-theme table {
+    width: 100%;
+    background-color: var(--table-bg) !important;
+    color: var(--table-text) !important;
+    border-color: var(--table-border) !important;
+}
+
+table th,
+table td {
+    border: 1px solid var(--table-border) !important;
+}
+
+/* Adjust table head */
+table thead th {
+    font-weight: 600;
+}
+
+/* Hover effect */
+table tbody tr:hover {
+    background-color: rgba(0, 123, 255, 0.1);
+}
+
+/* Action buttons */
+.table-action-btn {
+    background: transparent !important;
+    border: none !important;
+    color: var(--btn-action-color) !important;
+    padding: 4px 10px;
+    font-weight: 500;
+    text-decoration: none;
+    user-select: none;
+    transition: color 0.2s ease;
+}
+
+.table-action-btn:hover,
+.table-action-btn:focus {
+    color: var(--btn-action-hover);
+    background: transparent !important;
+    box-shadow: none !important;
+    text-decoration: underline;
+    outline: none;
+    cursor: pointer;
+}
+
+.cell-paid {
+    color: #1aaa55;
+    font-weight: 600;
+}
+
+.cell-pending {
+    color: #d7263d;
+    font-weight: 600;
+}
+
+.cell-pending-none {
+    color: #888b8e;
+    font-weight: 600;
+}

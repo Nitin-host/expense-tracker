@@ -1,0 +1,47 @@
+.custom-tooltip-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+.custom-tooltip-box {
+    position: absolute;
+    background: rgba(0, 0, 0, 0.85);
+    color: white;
+    padding: 5px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 999;
+    opacity: 0;
+    animation: fadeIn 0.2s forwards;
+}
+
+.custom-tooltip-box.top {
+    bottom: 120%;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.custom-tooltip-box.bottom {
+    top: 120%;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.custom-tooltip-box.left {
+    right: 120%;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.custom-tooltip-box.right {
+    left: 120%;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+@keyframes fadeIn {
+    to {
+        opacity: 1;
+    }
+}

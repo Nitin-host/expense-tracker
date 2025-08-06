@@ -1,0 +1,63 @@
+// filterPopover.scss
+.filter-trigger-btn {
+    border: none;
+    color: #1976d2;
+    display: flex;
+    align-items: center;
+    padding: 0.25rem 0.5rem;
+    background: transparent;
+    box-shadow: none;
+}
+
+.filter-popover .filter-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 0.5rem;
+
+    .filter-group {
+        flex: 1 1 44%;
+        min-width: 140px;
+        max-width: 210px;
+    }
+
+    @media (max-width: 768px) {
+        flex-direction: column;
+        gap: 0.6rem;
+
+        .filter-group {
+            flex-basis: 100%;
+            min-width: 120px;
+            max-width: 100%;
+        }
+    }
+}
+
+.filter-popover .popover-body {
+    padding-bottom: 0.7rem;
+}
+
+/* Filter select border colors for each filter type */
+.filter-select.type {
+    border-color: #2574a9;
+}
+
+.filter-select.status {
+    border-color: #27ae60;
+}
+
+.filter-select.created {
+    border-color: #9b59b6;
+}
+
+.filter-select.modified {
+    border-color: #34495e;
+}
+
+.btn-outline-primary {
+    --bs-btn-border-color: none !important
+}
+
+.btn:hover {
+    background-color: none !important;
+}

@@ -1,0 +1,131 @@
+// Color variables
+$light-bg: #fff;
+$light-color: #222;
+$light-border: #e4e4e4;
+$light-share-bg: #f4f4f4;
+$light-share-hover-bg: #e0e0e0;
+$light-share-color: #888;
+$light-share-hover-color: #0053fb;
+
+$dark-bg: #23232a;
+$dark-color: #f5f5f8;
+$dark-header-color: #fafbfd;
+$dark-secondary: #9aa0b5;
+$dark-border: #36363b;
+$dark-card-shadow: 0 2px 16px rgba(0, 0, 0, 0.21);
+$dark-share-bg: #252529;
+$dark-share-hover-bg: #373743;
+
+.solution-card {
+    border-radius: 12px;
+    margin-bottom: 1.2rem;
+    background: $light-bg;
+    color: $light-color;
+    transition: background 0.15s, color 0.15s, box-shadow 0.13s;
+    box-shadow: 0 2px 14px rgba(25, 25, 27, 0.08);
+
+    .card-header-bar {
+        background: transparent;
+        border-bottom: none;
+        min-height: 44px;
+
+        .card-title {
+            color: inherit;
+        }
+
+        button,
+        .share-btn {
+            background: $light-share-bg !important;
+            color: $light-share-color !important;
+            border-radius: 50%;
+            border: none;
+            transition: background 0.15s, color 0.15s;
+
+            &:hover,
+            &:focus {
+                background: $light-share-hover-bg !important;
+                color: $light-share-hover-color !important;
+            }
+        }
+    }
+
+    .d-flex>.btn-link,
+    // Action button: Edit, Delete (no underline)
+    .explore-link {
+        text-decoration: none !important;
+        box-shadow: none !important;
+        color: #236fff;
+        font-weight: 500;
+
+        &:hover,
+        &:focus {
+            color: #278dfb;
+            text-decoration: none !important;
+            box-shadow: none !important;
+        }
+    }
+
+    .card-footer-bar {
+        background: transparent;
+        border-top: 1px solid $light-border;
+        min-height: 44px;
+    }
+
+    .explore-link {
+        padding: 0;
+        font-size: 1em;
+    }
+
+    .mb-2.text-muted {
+        color: #495060 !important;
+    }
+}
+
+// DARK THEME OVERRIDES: Apply when parent has .dark-theme
+.dark-theme .solution-card {
+    background: $dark-bg;
+    color: $dark-color;
+    box-shadow: $dark-card-shadow;
+
+    .card-header-bar {
+        .card-title {
+            color: $dark-header-color;
+        }
+
+        .share-btn {
+            background: $dark-share-bg !important;
+            color: $dark-secondary !important;
+
+            &:hover,
+            &:focus {
+                background: $dark-share-hover-bg !important;
+                color: #64b4ff !important;
+            }
+        }
+    }
+
+    .mb-2.text-muted {
+        color: $dark-secondary !important;
+    }
+
+    .card-footer-bar {
+        border-top: 1px solid $dark-border;
+    }
+
+    .d-flex>.btn-link,
+    .explore-link {
+        color: #66aaff !important;
+        text-decoration: none !important;
+
+        &:hover,
+        &:focus {
+            color: #8cc8ff !important;
+            text-decoration: none !important;
+        }
+    }
+}
+
+.light-theme .solution-card {
+    background: $light-bg;
+    color: $light-color;
+}
