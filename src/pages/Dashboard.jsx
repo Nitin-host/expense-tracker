@@ -6,12 +6,14 @@ import Chart from 'react-apexcharts';
 
 const Dashboard = () => {
     const { id: solutionCardId } = useParams();
+
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
+    // Fetch dashboard data when solutionCardId changes
     useEffect(() => {
-        async function fetchDashboard() {
+        const fetchDashboard = async () => {
             setLoading(true);
             setError('');
             try {
@@ -22,11 +24,19 @@ const Dashboard = () => {
             } finally {
                 setLoading(false);
             }
-        }
+        };
         if (solutionCardId) fetchDashboard();
     }, [solutionCardId]);
 
-    if (loading) return <Spinner animation="border" role="status"><span className="visually-hidden">Loading...</span></Spinner>;
+    if (loading)
+        return (
+            <div className="text-center my-5">
+                <Spinner animation="border" variant="primary" role="status">
+                    <span className="visually-hidden">Loading...</span>
+                </Spinner>
+            </div>
+        );
+
     if (error) return <Alert variant="danger">{error}</Alert>;
     if (!data) return null;
 
@@ -36,56 +46,50 @@ const Dashboard = () => {
         remainingBudget,
         recentExpenses,
         recentCollectedCash,
+        percentageSpent,
     } = data;
 
-    const categories = recentExpenses.map(e => e.name || e.date);
-    const expenseAmounts = recentExpenses.map(e => e.amount);
-    const collectedAmounts = categories.map((_, idx) =>
-        recentCollectedCash[idx] ? recentCollectedCash[idx].amount : 0
-    );
-
-    const mixedOptions = {
-        chart: {
-            height: 350,
-            type: 'line',
-            stacked: false,
-            toolbar: { show: false }
-        },
-        dataLabels: {
-            enabled: true,
-            enabledOnSeries: [1]
-        },
-        stroke: { width: [0, 4] },
-        xaxis: { categories },
-        yaxis: [
-            { title: { text: "Expenses (₹)" }, labels: { style: { colors: "#FF9800" } } },
-            { opposite: true, title: { text: "Collected Cash (₹)" }, labels: { style: { colors: "#2EC492" } } }
-        ],
-        colors: ["#FF9800", "#2EC492"],
-        legend: { position: "top" }
-    };
-
-    const mixedSeries = [
-        { name: "Expenses", type: "column", data: expenseAmounts },
-        { name: "Collected Cash", type: "line", data: collectedAmounts }
+    // Pie chart data for Expenses vs Collected Cash
+    const pieLabels = ['Expenses', 'Collected Cash'];
+    const pieSeries = [
+        recentExpenses.reduce((sum, e) => sum + e.amount, 0),
+        recentCollectedCash.reduce((sum, c) => sum + c.amount, 0),
     ];
 
-    // Card colors
+    const pieOptions = {
+        labels: pieLabels,
+        colors: ['#FF9800', '#189708f1'], // Orange and green
+        legend: { position: 'bottom' },
+        dataLabels: { enabled: true },
+        tooltip: {
+            y: {
+                formatter: (val) => `₹${val.toLocaleString()}`,
+            },
+        },
+    };
+
+    // Determine remaining budget card color
     const remainingColor = remainingBudget < 0 ? 'danger' : 'success';
 
     return (
         <>
             <h4>Solution Budget Dashboard</h4>
 
+            {/* Top Summary Cards */}
             <Row className="mb-4">
+                {/* Total Collected Cash */}
                 <Col md={4} sm={12} className="mb-3">
                     <Card bg="light" text="dark" className="shadow-sm border-success">
                         <Card.Body>
                             <Card.Title>Total Collected Cash (Budget)</Card.Title>
-                            <h3 className="text-success">₹{totalCollectedCash.toLocaleString()}</h3>
+                            <h3 className="text-success">
+                                ₹{totalCollectedCash.toLocaleString()}
+                            </h3>
                         </Card.Body>
                     </Card>
                 </Col>
+
+                {/* Total Expenses */}
                 <Col md={4} sm={12} className="mb-3">
                     <Card bg="light" text="dark" className="shadow-sm border-warning">
                         <Card.Body>
@@ -94,25 +98,39 @@ const Dashboard = () => {
                         </Card.Body>
                     </Card>
                 </Col>
+
+                {/* Remaining Budget */}
                 <Col md={4} sm={12} className="mb-3">
                     <Card bg={remainingColor} text="white" className="shadow-sm">
                         <Card.Body>
                             <Card.Title>Remaining Budget</Card.Title>
-                            <h3>₹{remainingBudget.toLocaleString()}</h3>
+                            <Row>
+                                <Col>
+                                    <h3>₹{remainingBudget.toLocaleString()}</h3>
+                                </Col>
+                                <Col className="text-end mt-2">
+                                    <h6>{percentageSpent}% Spend</h6>
+                                </Col>
+                            </Row>
                         </Card.Body>
                     </Card>
                 </Col>
             </Row>
 
+            {/* Pie Chart and Recent Lists */}
             <Row>
+                {/* Pie Chart: Expense vs Collected Cash */}
                 <Col xs={12} md={8} className="mb-4">
                     <Card className="shadow-sm">
                         <Card.Body>
-                            <Card.Title>Expenses vs Collected Cash Trend</Card.Title>
-                            <Chart options={mixedOptions} series={mixedSeries} type="line" height={350} />
+                            <Card.Title>Expense vs Collected Cash</Card.Title>
+                            <Chart options={pieOptions} series={pieSeries} type="pie" height={350} />
                         </Card.Body>
                     </Card>
 
+                </Col>
+                <Col xs={12} md={4}>
+                    {/* Recent Expenses List */}
                     <Card className="shadow-sm mt-4">
                         <Card.Body>
                             <Card.Title>Recent Expenses Added</Card.Title>
@@ -120,12 +138,11 @@ const Dashboard = () => {
                                 <p>No recent expenses</p>
                             ) : (
                                 <ListGroup>
-                                    {recentExpenses.map(expense => (
+                                    {recentExpenses.map((expense) => (
                                         <ListGroup.Item key={expense.id}>
                                             <span className="fw-bold">{expense.name}</span>
                                             <span className="float-end text-warning">
-                                                ₹{expense.amount.toLocaleString()}
-                                                {" "}– {" "}
+                                                ₹{expense.amount.toLocaleString()} –{' '}
                                                 {new Date(expense.date).toLocaleDateString()}
                                             </span>
                                         </ListGroup.Item>
@@ -136,7 +153,8 @@ const Dashboard = () => {
                     </Card>
                 </Col>
 
-                <Col xs={12} md={4} className="mb-4">
+                {/* Recent Collected Cash List */}
+                <Col xs={12} md={4}>
                     <Card className="shadow-sm">
                         <Card.Body>
                             <Card.Title>Recent Collected Cash Added</Card.Title>
@@ -144,12 +162,11 @@ const Dashboard = () => {
                                 <p>No recent collected cash</p>
                             ) : (
                                 <ListGroup>
-                                    {recentCollectedCash.map(cash => (
+                                    {recentCollectedCash.map((cash) => (
                                         <ListGroup.Item key={cash.id}>
                                             <span className="fw-bold">{cash.name}</span>
                                             <span className="float-end text-success">
-                                                ₹{cash.amount.toLocaleString()}
-                                                {" "}– {" "}
+                                                ₹{cash.amount.toLocaleString()} –{' '}
                                                 {new Date(cash.date).toLocaleDateString()}
                                             </span>
                                         </ListGroup.Item>

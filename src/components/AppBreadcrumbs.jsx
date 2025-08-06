@@ -8,10 +8,10 @@ const routeNameMap = {
     '': 'Dashboard',
     dashboard: 'Dashboard',
     'solution-cards': 'Solution Cards',
-    // add other fixed route names
+    // add other fixed route names as needed
 };
 
-// Dynamic parameter label map, as before:
+// Dynamic parameter label map
 const dynamicParamLabelMap = {
     solutionId: (id) => `Solution Card #${id}`,
     userId: (id) => `User #${id}`,
@@ -20,10 +20,7 @@ const dynamicParamLabelMap = {
 
 const AppBreadcrumbs = ({ theme = 'light' }) => {
     const location = useLocation();
-
-    // Split path
     const paths = location.pathname.split('/').filter(Boolean);
-
     let pathSoFar = '';
 
     return (
@@ -36,10 +33,8 @@ const AppBreadcrumbs = ({ theme = 'light' }) => {
             {paths.map((segment, index) => {
                 pathSoFar += `/${segment}`;
 
-                // Detect if segment looks like a param (e.g. numeric or UUID)
-                const isParam =
-                    /^\d+$/.test(segment) ||
-                    /^[0-9a-fA-F-]{8,}$/.test(segment);
+                // Detect if segment looks like param (e.g. numeric or UUID)
+                const isParam = /^\d+$/.test(segment) || /^[0-9a-fA-F-]{8,}$/.test(segment);
 
                 let label;
 
@@ -52,14 +47,16 @@ const AppBreadcrumbs = ({ theme = 'light' }) => {
                 }
 
                 const isLast = index === paths.length - 1;
+                const isSecondLast = index === paths.length - 2;
 
                 return (
                     <Breadcrumb.Item
                         key={pathSoFar}
-                        linkAs={Link}
-                        linkProps={{ to: pathSoFar }}
-                        active={isLast}
-                        aria-current={isLast ? 'page' : undefined}
+                        {...(!(isLast || isSecondLast) ? { linkAs: Link, linkProps: { to: pathSoFar } } : {})}
+                        active={isLast || isSecondLast}
+                        aria-current={isLast || isSecondLast ? 'page' : undefined}
+                        className={(isLast || isSecondLast) ? 'text-secondary' : ''}
+                        style={(isLast || isSecondLast) ? { color: '#6c757d', cursor: 'default', textDecoration: 'none' } : {}}
                     >
                         {label}
                     </Breadcrumb.Item>

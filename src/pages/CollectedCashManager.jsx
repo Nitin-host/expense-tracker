@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import TableUtil from '../utils/TableUtil';
-import { Button, Modal, Form, Alert } from 'react-bootstrap';
+import { Button, Modal, Form, Alert, Spinner } from 'react-bootstrap';
 import { FaEdit, FaTrashAlt } from 'react-icons/fa';
 import api from '../api/http';
 import { useParams } from 'react-router-dom';
@@ -162,7 +162,7 @@ function CollectedCashManager() {
         { label: 'Updated Date', key: 'updatedDate', dataFormat: 'date' }
     ];
 
-    if (loading) return <p>Loading collected cash data...</p>;
+    if (loading) return <div className="text-center my-5"><Spinner animation="border" variant="primary" role="status" /></div>;
     if (error) return <Alert variant="danger">{error}</Alert>;
 
     return (

@@ -6,7 +6,7 @@ import {
 import api from '../api/http';  // your axios instance
 import { useAlert } from '../utils/AlertUtil';
 import TableUtil from '../utils/TableUtil';
-import { RiUserSettingsLine } from 'react-icons/ri';
+import { RiUserSettingsLine, RiDeleteBin6Line } from 'react-icons/ri';
 
 const roles = ['user', 'admin', 'super_admin'];
 
@@ -20,6 +20,10 @@ const CreateUserBySuperAdmin = () => {
     const [showRoleModal, setShowRoleModal] = useState(false);
     const [selectedUser, setSelectedUser] = useState(null);
     const [newRole, setNewRole] = useState('');
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [userToDelete, setUserToDelete] = useState(null);
+    const [deleting, setDeleting] = useState(false);
+
 
     const { notifySuccess, notifyError } = useAlert();
 
@@ -68,6 +72,28 @@ const CreateUserBySuperAdmin = () => {
         setShowRoleModal(true);
     };
 
+    const openDeleteModal = (user) => {
+        setUserToDelete(user);
+        setShowDeleteModal(true);
+    };
+
+    const handleDeleteUser = async () => {
+        if (!userToDelete) return;
+
+        setDeleting(true);
+        try {
+            await api.delete(`/user/${userToDelete._id}`);
+            notifySuccess('User deleted successfully');
+            setShowDeleteModal(false);
+            setUserToDelete(null);
+            fetchUsers(); // Refresh user list
+        } catch (err) {
+            notifyError(err.response?.data?.message || 'Failed to delete user');
+        }
+        setDeleting(false);
+    };
+
+
     // Submit role change
     const submitRoleChange = async () => {
         if (!selectedUser) return;
@@ -103,6 +129,13 @@ const CreateUserBySuperAdmin = () => {
             btnAction: openRoleModal,
             iconComponent: RiUserSettingsLine,
             isVisible: () => true,
+        },
+        {
+            btnTitle: 'Delete',
+            btnClass: 'btn-link p-0 text-danger',
+            btnAction: (user) => openDeleteModal(user),
+            iconComponent: RiDeleteBin6Line,
+            isVisible: (user) => user.role !== 'super_admin', // Optional: prevent deleting super admins if you want
         },
     ];
 
@@ -238,6 +271,41 @@ const CreateUserBySuperAdmin = () => {
                         disabled={!newRole || creating}
                     >
                         {creating ? 'Saving...' : 'Save Changes'}
+                    </Button>
+                </Modal.Footer>
+            </Modal>
+            {/* Delete Confirmation Modal */}
+            <Modal
+                show={showDeleteModal}
+                onHide={() => setShowDeleteModal(false)}
+                centered
+                backdrop="static"
+            >
+                <Modal.Header closeButton>
+                    <Modal.Title>Confirm Delete User</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    {userToDelete ? (
+                        <p>
+                            Are you sure you want to delete user <strong>{userToDelete.name}</strong>?
+                            This action cannot be undone.
+                        </p>
+                    ) : null}
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button
+                        variant="secondary"
+                        onClick={() => setShowDeleteModal(false)}
+                        disabled={deleting}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="danger"
+                        onClick={handleDeleteUser}
+                        disabled={deleting}
+                    >
+                        {deleting ? 'Deleting...' : 'Delete'}
                     </Button>
                 </Modal.Footer>
             </Modal>

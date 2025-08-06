@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import TableUtil from '../utils/TableUtil';
 import ExpenseForm from './ExpenseForm';
-import { Button, Modal } from 'react-bootstrap';
+import { Button, Modal, Spinner } from 'react-bootstrap';
 import { FaEdit, FaTrashAlt, FaEye } from 'react-icons/fa';
 import api from '../api/http';
 import { useParams } from 'react-router-dom';
@@ -129,7 +129,7 @@ function ExpenseManager() {
         }
     ];
 
-    if (loading) return <p>Loading expenses...</p>;
+    if (loading) return <div className="text-center my-5"><Spinner animation="border" variant="primary" role="status" /></div>;
     if (error) return <p className="text-danger">{error}</p>;
 
     const getCardBorderColor = (row) => {

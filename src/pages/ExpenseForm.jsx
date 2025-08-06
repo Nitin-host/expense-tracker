@@ -181,7 +181,6 @@ function ExpenseForm({ expense, solutionCardId, onSuccess, onCancel }) {
                 >
                     <option value="cash">Cash</option>
                     <option value="upi">UPI</option>
-                    <option value="card">Card</option>
                 </Form.Select>
             </Form.Group>
 

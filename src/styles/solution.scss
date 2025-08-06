@@ -128,4 +128,5 @@ $dark-share-hover-bg: #373743;
 .light-theme .solution-card {
     background: $light-bg;
     color: $light-color;
+    --bs-card-height: 200px !important;
 }

@@ -1,8 +1,12 @@
 import axios from 'axios';
+import { useAlert } from '../utils/AlertUtil';
+
+const { notifySuccess, notifyError } = useAlert
 
 const api = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
-    withCredentials: true, // Send cookies (refreshToken) with requests
+    // baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
+    baseURL: import.meta.env.VITE_API_URL || 'https://expense-tracker-api-44nm.onrender.com/api',
+    withCredentials: true,
 });
 
 let isRefreshing = false;
@@ -15,17 +19,14 @@ const processQueue = (error, token = null) => {
     failedQueue = [];
 };
 
-// In-memory access token (not localStorage)
-let accessToken = null;
-
-export const setAccessToken = (token) => {
-    accessToken = token;
-};
-
 api.interceptors.request.use(
     (config) => {
-        if (accessToken) {
-            config.headers.Authorization = `Bearer ${accessToken}`;
+        const storedAuth = localStorage.getItem('auth');
+        if (storedAuth) {
+            const parsed = JSON.parse(storedAuth);
+            if (parsed.token) {
+                config.headers.Authorization = `Bearer ${parsed.token}`;
+            }
         }
         return config;
     },
@@ -36,8 +37,11 @@ api.interceptors.response.use(
     (response) => response,
     async (error) => {
         const originalRequest = error.config;
-
-        if (error.response?.status === 401 && !originalRequest._retry) {
+        // Check for both 401 and 403 responses
+        if (
+            (error.response?.status === 401 || error.response?.status === 403) &&
+            !originalRequest._retry
+        ) {
             originalRequest._retry = true;
 
             if (isRefreshing) {
@@ -52,16 +56,21 @@ api.interceptors.response.use(
             isRefreshing = true;
 
             try {
-                const { data } = await api.get('/refresh-token'); // Your backend should read from cookies
-
-                accessToken = data.token;
-
+                // Use POST and correct refresh endpoint!
+                const { data } = await api.post('/refresh');
                 processQueue(null, data.token);
 
+                // Update localStorage
+                localStorage.setItem('auth', JSON.stringify({ ...JSON.parse(localStorage.getItem('auth')), token: data.token }));
+
+                notifySuccess('Re-authentication successful')
                 originalRequest.headers.Authorization = `Bearer ${data.token}`;
                 return api(originalRequest);
             } catch (err) {
+                notifyError('Failed to Re-authenticated')
                 processQueue(err, null);
+                localStorage.removeItem('auth');
+                window.location.reload();
                 return Promise.reject(err);
             } finally {
                 isRefreshing = false;
