@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Container, Row, Col, Button } from 'react-bootstrap';
+import { Container, Row, Col, Button, Spinner } from 'react-bootstrap';
 import api from '../api/http';
 import { useAlert } from '../utils/AlertUtil';
 
 import SolutionCard from '../components/SolutionCard';
 import SolutionModal from '../components/SolutionModal'; // reuse your existing modal code
 import ShareSolutionModal from '../components/ShareSolutionModal';
+import '../styles/solution.scss'
 
 export default function Solution() {
     const [solutions, setSolutions] = useState([]);
@@ -70,54 +71,62 @@ export default function Solution() {
 
     return (
         <Container className="mt-4">
-            <Row className="mb-3">
-                <Col><h3>Solutions ({solutions.length})</h3></Col>
-                <Col className="text-end">
-                    <Button onClick={() => setShowCreateModal(true)}>Create</Button>
-                </Col>
-            </Row>
+            {loading && <div className="text-center my-5">
+                <Spinner animation="border" variant="primary" />
+            </div>}
+            {!loading &&
+                <>
 
-            {error && <div className="alert alert-danger">{error}</div>}
+                    <Row className="mb-3">
+                        <Col><h3>Solutions ({solutions.length})</h3></Col>
+                        <Col className="text-end">
+                            <Button onClick={() => setShowCreateModal(true)}>Create</Button>
+                        </Col>
+                    </Row>
 
-            <Row xs={1} sm={2} md={3} lg={4} className="g-4">
-                {solutions.map((solution) => (
-                    <Col key={solution._id}>
-                        <SolutionCard
-                            solution={solution}
-                            onEdit={setEditSolution}
-                            onDelete={handleDelete}
-                            onShare={setShareSolution}
+                    {error && <div className="alert alert-danger">{error}</div>}
+
+                    <Row xs={1} sm={2} md={3} lg={4} className="g-4">
+                        {solutions.map((solution) => (
+                            <Col key={solution._id}>
+                                <SolutionCard
+                                    solution={solution}
+                                    onEdit={setEditSolution}
+                                    onDelete={handleDelete}
+                                    onShare={setShareSolution}
+                                />
+                            </Col>
+                        ))}
+                    </Row>
+
+                    {showCreateModal && (
+                        <SolutionModal
+                            show={showCreateModal}
+                            onHide={() => setShowCreateModal(false)}
+                            onSubmit={handleCreate}
                         />
-                    </Col>
-                ))}
-            </Row>
+                    )}
 
-            {showCreateModal && (
-                <SolutionModal
-                    show={showCreateModal}
-                    onHide={() => setShowCreateModal(false)}
-                    onSubmit={handleCreate}
-                />
-            )}
+                    {editSolution && (
+                        <SolutionModal
+                            show={Boolean(editSolution)}
+                            onHide={() => setEditSolution(null)}
+                            onSubmit={handleUpdate}
+                            initialData={editSolution}
+                        />
+                    )}
 
-            {editSolution && (
-                <SolutionModal
-                    show={Boolean(editSolution)}
-                    onHide={() => setEditSolution(null)}
-                    onSubmit={handleUpdate}
-                    initialData={editSolution}
-                />
-            )}
-
-            {shareSolution && (
-                <ShareSolutionModal
-                    show={Boolean(shareSolution)}
-                    onHide={() => setShareSolution(null)}
-                    solution={shareSolution}
-                    onDone={fetchSolutions}
-                    onShare={handleShare}
-                />
-            )}
+                    {shareSolution && (
+                        <ShareSolutionModal
+                            show={Boolean(shareSolution)}
+                            onHide={() => setShareSolution(null)}
+                            solution={shareSolution}
+                            onDone={fetchSolutions}
+                            onShare={handleShare}
+                        />
+                    )}
+                </>
+            }
         </Container>
     );
 }

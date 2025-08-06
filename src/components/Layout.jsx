@@ -9,9 +9,6 @@ import Sidebar from './Sidebar';
 import AppBreadcrumbs from './AppBreadcrumbs';
 import '../styles/themes.scss'
 
-// Import your global theme styles here (make sure you created these)
-// Example: import '../styles/themes.scss';
-
 const Layout = () => {
     // Sidebar expanded state toggled by hamburger button
     const [sidebarExpanded, setSidebarExpanded] = useState(false);
@@ -20,13 +17,21 @@ const Layout = () => {
     const [sidebarHovered, setSidebarHovered] = useState(false);
 
     // Theme state: 'dark' or 'light', defaults to browser preference or saved theme
+    // const [theme, setTheme] = useState(() => {
+    //     const saved = localStorage.getItem('app-theme');
+    //     if (saved === 'dark' || saved === 'light') return saved;
+    //     if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+    //         return 'dark';
+    //     return 'light';
+    // });
+
+    // Updated: Default to 'light' theme always initially,
+    // unless the user explicitly saved a preference.
     const [theme, setTheme] = useState(() => {
         const saved = localStorage.getItem('app-theme');
-        if (saved === 'dark' || saved === 'light') return saved;
-        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
-            return 'dark';
-        return 'light';
+        return (saved === 'dark' || saved === 'light') ? saved : 'light';
     });
+
     const [toggleHovered, setToggleHovered] = useState(false);
 
     const dispatch = useDispatch();
@@ -92,7 +97,7 @@ const Layout = () => {
             >
                 <Row className="align-items-center w-25 px-3">
                     <Col xs={6} md={6}>
-                        <Navbar.Brand as={Link} to="/" className="fw-bold" style={{ letterSpacing: 1 }}>
+                        <Navbar.Brand as={Link} to="/home" className="fw-bold" style={{ letterSpacing: 1 }}>
                             Expense Tracker
                         </Navbar.Brand>
                     </Col>

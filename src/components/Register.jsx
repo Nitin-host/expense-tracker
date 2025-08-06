@@ -37,7 +37,7 @@ const Register = ({ onRegister, loading, error, success }) => {
         <BackgroundWrapper>
             <div className="auth-card">
                 <div className="text-center mb-2">
-                    <img src="/logo.png" alt="Expense Tracker Logo" style={{ width: 52, marginBottom: 5 }} />
+                    <img src="/logo.svg" alt="Expense Tracker Logo" style={{ width: 52, marginBottom: 5 }} />
                 </div>
                 <h5 className="mb-2 text-center" style={{ fontWeight: 500 }}>Create Account</h5>
                 {error && <Alert variant="danger">{error}</Alert>}

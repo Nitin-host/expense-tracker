@@ -15,10 +15,10 @@ const Login = ({ onLogin, loading, error }) => {
     return (
         <BackgroundWrapper>
             <div className="auth-card">
-                {/* <div className="text-center mb-2">
-                    <img src="/logo.png" alt="Expense Tracker Logo" style={{ width: 52, marginBottom: 5 }} />
-                </div> */}
-                <h5 className="mb-2 text-center" style={{ fontWeight: 500 }}>Welcome to Expense Tracker</h5>
+                <div className="text-center mb-2">
+                    <img src="/logo.svg" alt="Expense Tracker Logo" style={{ width: 52, marginBottom: 5 }} />
+                </div>
+                <h5 className="mb-2 text-center p-2" style={{ fontWeight: 500 }}>Welcome to Expense Tracker</h5>
                 <Form onSubmit={handleSubmit}>
                     <Form.Group className="mb-3" controlId="loginEmail">
                         <Form.Control type="email" autoComplete="username"
