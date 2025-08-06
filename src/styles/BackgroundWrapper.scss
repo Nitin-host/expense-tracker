@@ -1,0 +1,18 @@
+.auth-bg-wrapper {
+    min-height: 100vh;
+    min-width: 100vw;
+    background: url('/expense-background.avif') no-repeat center center fixed;
+    background-size: cover;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.auth-card {
+    background: rgba(255, 255, 255, 0.97);
+    border-radius: 18px;
+    box-shadow: 0 4px 32px rgba(0, 0, 0, 0.22);
+    padding: 2.5rem 2rem 2rem 2rem;
+    max-width: 400px;
+    width: 100%;
+}

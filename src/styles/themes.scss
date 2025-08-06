@@ -1,0 +1,371 @@
+/* themes.scss */
+
+/* Variables */
+$sidebar-width-expanded: 220px;
+$sidebar-width-collapsed: 60px;
+
+/* Base styles */
+.full-app-layout {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Dark Theme */
+body.dark-theme,
+.full-app-layout.dark-theme {
+    background-color: #121212;
+    color: #e0e0e0;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.full-app-layout.dark-theme {
+    .navbar {
+        background-color: #1f1f1f !important;
+        color: #e0e0e0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .nav-link,
+    .navbar-text,
+    .navbar-brand {
+        color: #e0e0e0 !important;
+    }
+
+    .btn-outline-light {
+        color: #e0e0e0;
+        border-color: #e0e0e0;
+
+        &:hover,
+        &:focus {
+            background-color: #0d6efd;
+            border-color: #0d6efd;
+            color: white;
+        }
+    }
+
+    /* Theme toggle button in navbar */
+    .theme-toggle-btn {
+        color: #e0e0e0;
+        border-color: #e0e0e0;
+        background: transparent;
+        padding: 0.25rem 0.5rem;
+        font-size: 1.2rem;
+
+        &:hover,
+        &:focus {
+            color: white;
+            border-color: #0d6efd;
+            background-color: #0d6efd;
+            cursor: pointer;
+            outline: none;
+        }
+    }
+
+    .sidebar {
+        background-color: #1f1f1f;
+        border-right: 1px solid rgba(255, 255, 255, 0.1);
+        color: #e0e0e0;
+
+        /* Scrollbar styling for better UX */
+        scrollbar-width: thin;
+        scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+
+        &::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        &::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        &::-webkit-scrollbar-thumb {
+            background-color: rgba(255, 255, 255, 0.15);
+            border-radius: 4px;
+            border: 2px solid transparent;
+        }
+
+        .nav-text {
+            margin-left: 10px;
+        }
+
+        .nav-item {
+            color: #e0e0e0;
+            padding: 10px;
+            white-space: nowrap;
+
+            &.active,
+            &:hover,
+            &:focus {
+                background-color: #0d6efd !important;
+                color: white !important;
+                text-decoration: none;
+            }
+
+            button.nav-item {
+                border: none;
+                background: none;
+                width: 100%;
+                text-align: left;
+                cursor: pointer;
+
+                &:hover,
+                &:focus,
+                &.active {
+                    background-color: #0d6efd !important;
+                    color: white !important;
+                }
+            }
+        }
+    }
+
+    .main-content {
+        background-color: #121212;
+        color: #e0e0e0;
+    }
+}
+
+/* Light Theme */
+body.light-theme,
+.full-app-layout.light-theme {
+    background-color: white;
+    color: #212529;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.full-app-layout.light-theme {
+    .navbar {
+        background-color: #f8f9fa !important;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        color: #212529;
+    }
+
+    .nav-link,
+    .navbar-text,
+    .navbar-brand {
+        color: #212529 !important;
+    }
+
+    .btn-outline-dark {
+        color: #212529;
+        border-color: #212529;
+
+        &:hover,
+        &:focus {
+            background-color: #0d6efd;
+            border-color: #0d6efd;
+            color: white;
+        }
+    }
+
+    /* Theme toggle button in light mode */
+    .theme-toggle-btn {
+        color: #212529;
+        border-color: #212529;
+        background: transparent;
+        padding: 0.25rem 0.5rem;
+        font-size: 1.2rem;
+
+        &:hover,
+        &:focus {
+            color: white;
+            border-color: #0d6efd;
+            background-color: #0d6efd;
+            cursor: pointer;
+            outline: none;
+        }
+    }
+
+    .sidebar {
+        background-color: #f8f9fa;
+        border-right: 1px solid rgba(0, 0, 0, 0.1);
+        color: #212529;
+
+        scrollbar-width: thin;
+        scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
+
+        &::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        &::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        &::-webkit-scrollbar-thumb {
+            background-color: rgba(0, 0, 0, 0.15);
+            border-radius: 4px;
+            border: 2px solid transparent;
+        }
+
+        .nav-text {
+            margin-left: 10px;
+        }
+
+        .nav-item {
+            color: #212529;
+            padding: 0.375rem 1rem;
+            white-space: nowrap;
+
+            &.active,
+            &:hover,
+            &:focus {
+                background-color: #0d6efd !important;
+                color: white !important;
+                text-decoration: none;
+            }
+
+            button.nav-item {
+                border: none;
+                background: none;
+                width: 100%;
+                text-align: left;
+                cursor: pointer;
+
+                &:hover,
+                &:focus,
+                &.active {
+                    background-color: #0d6efd !important;
+                    color: white !important;
+                }
+            }
+        }
+    }
+
+    .main-content {
+        background-color: white;
+        color: #212529;
+    }
+}
+
+/* Sidebar base styles */
+.sidebar {
+    min-height: 100vh;
+    position: fixed;
+    top: 56px;
+    left: 0;
+    display: flex;
+    flex-direction: column;
+    z-index: 1030;
+    overflow-x: hidden;
+    transition: width 0.3s ease;
+    width: $sidebar-width-collapsed;
+
+    &.expanded {
+        width: $sidebar-width-expanded;
+    }
+
+    &.collapsed {
+        width: $sidebar-width-collapsed;
+    }
+}
+
+/* Main content area */
+.main-content {
+    min-height: 100vh;
+    padding: 1rem;
+    overflow-y: auto;
+    transition: margin-left 0.3s ease;
+    margin-top: 56px;
+
+    &.sidebar-expanded {
+        margin-left: $sidebar-width-expanded;
+    }
+
+    &.sidebar-collapsed {
+        margin-left: $sidebar-width-collapsed;
+    }
+}
+
+/* Active sidebar menu item */
+.nav-item.active {
+    background-color: #0d6efd;
+    /* Bootstrap primary blue */
+    color: #fff !important;
+    /* White text */
+    font-weight: 600;
+}
+
+/* Make sure icon colors inside active items become white */
+.nav-item.active .nav-icon,
+.nav-item.active svg {
+    color: #fff !important;
+    /* Icons white */
+}
+
+// Toggle button
+.icon-toggle-btn {
+    background: none !important;
+    border: none !important;
+    box-shadow: none;
+    outline: none;
+    color: inherit;
+    /* Inherit theme color */
+    padding: 0.4rem;
+    /* Increase for touch areas if needed */
+    font-size: 1.4rem;
+    /* Icon size */
+    display: flex;
+    align-items: center;
+    transition: color 0.18s;
+
+    &:hover,
+    &:focus {
+        color: #0d6efd;
+        background: none !important;
+        outline: none;
+        box-shadow: none;
+    }
+}
+
+
+/* Light theme breadcrumb - default */
+.breadcrumb-light {
+    background-color: transparent;
+    color: #212529;
+
+    .breadcrumb-item+.breadcrumb-item::before {
+        color: #6c757d;
+        /* separator color */
+    }
+
+    .breadcrumb-item a {
+        color: #0d6efd;
+
+        &:hover,
+        &:focus {
+            color: #0a58ca;
+            text-decoration: underline;
+        }
+    }
+
+    .breadcrumb-item.active {
+        color: #6c757d;
+    }
+}
+
+/* Dark theme breadcrumb */
+.breadcrumb-dark {
+    background-color: transparent;
+    color: #e0e0e0;
+
+    .breadcrumb-item+.breadcrumb-item::before {
+        color: #bbb;
+        /* separator color lightened */
+    }
+
+    .breadcrumb-item a {
+        color: #74b9ff;
+        /* lighter blue for links */
+
+        &:hover,
+        &:focus {
+            color: #4a90e2;
+            text-decoration: underline;
+        }
+    }
+
+    .breadcrumb-item.active {
+        color: #bbb;
+    }
+}

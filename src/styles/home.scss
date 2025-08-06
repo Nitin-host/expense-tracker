@@ -1,0 +1,93 @@
+.home-hero {
+    min-height: calc(100vh - 56px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 0;
+    background: linear-gradient(135deg, var(--home-bg1) 60%, var(--home-bg2) 100%);
+    position: relative;
+    z-index: 1;
+}
+
+body.light-theme {
+    --home-bg1: #f5f9ff;
+    --home-bg2: #eaf1fd;
+}
+
+body.dark-theme {
+    --home-bg1: #16233a;
+    --home-bg2: #232237;
+}
+
+.home-svg-card {
+    background: var(--home-svg-bg, #fff);
+    border-radius: 50%;
+    box-shadow: 0 8px 32px 0 rgba(27, 49, 86, 0.08);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 330px;
+    height: 330px;
+    margin-top: 1.2rem;
+    margin-bottom: 1.2rem;
+}
+
+body.light-theme .home-svg-card {
+    --home-svg-bg: #f7fbff;
+}
+
+body.dark-theme .home-svg-card {
+    --home-svg-bg: #222838;
+}
+
+.home-svg {
+    max-width: 84%;
+    max-height: 230px;
+    display: block;
+}
+
+.home-info-card {
+    border-radius: 1.8rem;
+    background: rgba(255, 255, 255, 0.94);
+    box-shadow: 0 6px 26px 0 rgba(28, 58, 128, 0.08);
+    padding: 2.2rem 2.2rem 2.4rem 2.2rem;
+    min-width: 290px;
+    max-width: 450px;
+    margin: 0 auto;
+}
+
+body.dark-theme .home-info-card {
+    background: rgba(23, 29, 44, 0.92);
+    color: #f3f4f6;
+    box-shadow: 0 8px 36px 0 rgba(13, 18, 32, 0.34);
+}
+
+.home-title {
+    font-weight: 800;
+    font-size: 2.3rem;
+    letter-spacing: 0.03em;
+    margin-bottom: 1.2rem;
+}
+
+.home-lead {
+    font-size: 1.16rem;
+    margin-bottom: 2rem;
+    font-weight: 400;
+    color: var(--bs-secondary-color);
+    line-height: 1.55;
+}
+
+.home-get-started-btn {
+    padding: 0.85rem 2.4rem;
+    font-weight: 600;
+    font-size: 1.1rem;
+    border-radius: 2.5rem;
+    transition: all 0.2s;
+    box-shadow: 0 2px 11px 0 rgba(13, 110, 253, 0.07);
+}
+
+.home-get-started-btn:hover,
+.home-get-started-btn:focus {
+    transform: translateY(-2px) scale(1.04);
+    box-shadow: 0 6px 25px 0 rgba(13, 110, 253, 0.20);
+}
