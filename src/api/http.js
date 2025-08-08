@@ -4,8 +4,8 @@ import { useAlert } from '../utils/AlertUtil';
 const { notifySuccess, notifyError } = useAlert
 
 const api = axios.create({
-    // baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
     baseURL: import.meta.env.VITE_API_URL || 'https://expense-tracker-api-44nm.onrender.com/api',
+    // baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
     withCredentials: true,
 });
 
@@ -37,7 +37,7 @@ api.interceptors.response.use(
     (response) => response,
     async (error) => {
         const originalRequest = error.config;
-        // Check for both 401 and 403 responses
+
         if (
             (error.response?.status === 401 || error.response?.status === 403) &&
             !originalRequest._retry
@@ -47,30 +47,41 @@ api.interceptors.response.use(
             if (isRefreshing) {
                 return new Promise((resolve, reject) => {
                     failedQueue.push({ resolve, reject });
-                }).then((token) => {
-                    originalRequest.headers.Authorization = `Bearer ${token}`;
-                    return api(originalRequest);
-                }).catch((err) => Promise.reject(err));
+                })
+                    .then(token => {
+                        originalRequest.headers.Authorization = `Bearer ${token}`;
+                        return api(originalRequest);
+                    })
+                    .catch(err => Promise.reject(err));
             }
 
             isRefreshing = true;
 
             try {
-                // Use POST and correct refresh endpoint!
                 const { data } = await api.post('/refresh');
+
+                // Update localStorage token
+                const oldAuth = JSON.parse(localStorage.getItem('auth')) || {};
+                localStorage.setItem('auth', JSON.stringify({ ...oldAuth, token: data.token }));
+
+                // Update axios default Authorization header for future requests
+                api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
+
                 processQueue(null, data.token);
 
-                // Update localStorage
-                localStorage.setItem('auth', JSON.stringify({ ...JSON.parse(localStorage.getItem('auth')), token: data.token }));
+                notifySuccess('Re-authentication successful');
 
-                notifySuccess('Re-authentication successful')
+                // Update original request header
                 originalRequest.headers.Authorization = `Bearer ${data.token}`;
+
                 return api(originalRequest);
             } catch (err) {
-                notifyError('Failed to Re-authenticated')
+                notifyError('Failed to Re-authenticate');
                 processQueue(err, null);
+
                 localStorage.removeItem('auth');
                 window.location.reload();
+
                 return Promise.reject(err);
             } finally {
                 isRefreshing = false;

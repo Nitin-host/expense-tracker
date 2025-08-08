@@ -24,6 +24,31 @@ $dark-share-hover-bg: #373743;
     transition: background 0.15s, color 0.15s, box-shadow 0.13s;
     box-shadow: 0 2px 14px rgba(25, 25, 27, 0.08);
 
+    // Make the card a column flex container that fills its parent (Col)
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+
+    // Ensure card body grows to fill space
+    .card-body {
+        flex: 1 1 auto;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+    // Limit description height with line-clamp (optional; tidy look)
+    .description {
+        overflow: hidden;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        /* show up to 3 lines */
+        -webkit-box-orient: vertical;
+        line-height: 1.3rem;
+        min-height: 3.9rem;
+        /* approx 3 lines min height */
+    }
+
     .card-header-bar {
         background: transparent;
         border-bottom: none;
@@ -50,7 +75,6 @@ $dark-share-hover-bg: #373743;
     }
 
     .d-flex>.btn-link,
-    // Action button: Edit, Delete (no underline)
     .explore-link {
         text-decoration: none !important;
         box-shadow: none !important;
@@ -69,6 +93,8 @@ $dark-share-hover-bg: #373743;
         background: transparent;
         border-top: 1px solid $light-border;
         min-height: 44px;
+        /* ensure footer sits at bottom */
+        margin-top: auto;
     }
 
     .explore-link {
@@ -81,7 +107,7 @@ $dark-share-hover-bg: #373743;
     }
 }
 
-// DARK THEME OVERRIDES: Apply when parent has .dark-theme
+// DARK THEME OVERRIDES
 .dark-theme .solution-card {
     background: $dark-bg;
     color: $dark-color;
@@ -128,5 +154,71 @@ $dark-share-hover-bg: #373743;
 .light-theme .solution-card {
     background: $light-bg;
     color: $light-color;
-    --bs-card-height: 200px !important;
+}
+
+
+/* ===== React-Select Theming ===== */
+.react-select__control {
+    background-color: var(--form-bg) !important;
+    color: var(--form-text-color) !important;
+    border: 1px solid var(--form-border-color) !important;
+    min-height: 38px;
+    box-shadow: none !important;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+
+    &:hover {
+        border-color: var(--btn-bg) !important;
+    }
+}
+
+.react-select__single-value {
+    color: var(--form-text-color) !important;
+}
+
+.react-select__placeholder {
+    color: var(--form-placeholder-color) !important;
+}
+
+.react-select__menu {
+    background-color: var(--form-bg) !important;
+    border: 1px solid var(--form-border-color) !important;
+    color: var(--form-text-color) !important;
+    z-index: 1000;
+}
+
+.react-select__option {
+    background-color: transparent !important;
+    color: var(--form-text-color) !important;
+    padding: 8px 12px;
+
+    &:hover {
+        background-color: var(--filter-btn-hover-bg) !important;
+    }
+}
+
+.react-select__option--is-selected {
+    background-color: var(--btn-bg) !important;
+    color: #fff !important;
+}
+
+.react-select__multi-value {
+    background-color: var(--btn-bg) !important;
+    color: #fff !important;
+
+    .react-select__multi-value__label {
+        color: #fff !important;
+    }
+
+    .react-select__multi-value__remove:hover {
+        background-color: var(--filter-btn-hover-bg) !important;
+        color: #fff !important;
+    }
+}
+
+.react-select__indicator {
+    color: var(--form-text-color) !important;
+
+    &:hover {
+        color: var(--btn-bg) !important;
+    }
 }

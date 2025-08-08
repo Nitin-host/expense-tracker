@@ -135,6 +135,7 @@ export default function ShareSolutionModal({ show, onHide, solution, onDone, onS
                         value={selectedUsers}
                         options={allUsers}
                         onChange={onUserSelectChange}
+                        classNamePrefix="react-select"
                         placeholder="Select users to share with..."
                         formatOptionLabel={formatOptionLabel}
                     />

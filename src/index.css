@@ -1,73 +1,201 @@
+/* Light theme (default) */
+body[data-theme="light"] {
+    background-color: #ffffff;
+    color: #000000;
+}
+
+/* Dark theme */
+body[data-theme="dark"] {
+    background-color: #121212;
+    color: #ffffff;
+}
+
+/* Example card styling */
+body[data-theme="dark"] .card {
+    background-color: #1e1e1e;
+    color: #ffffff;
+}
+
+body[data-theme="light"] .card {
+    background-color: #ffffff;
+    color: #000000;
+}
+
+
+body[data-theme="dark"] .form-control {
+    background-color: #000000;
+    color: #ffffff;
+    border: none;
+
+    &::placeholder {
+        color: #ffffff;
+    }
+}
+
+
+/* Light Theme */
 :root {
-    font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-    line-height: 1.5;
-    font-weight: 400;
+    --filter-btn-color: #0d6efd;
+    --filter-btn-hover-bg: #e7f1ff;
+    --filter-btn-hover-color: #0a58ca;
 
-    color-scheme: light dark;
-    color: rgba(255, 255, 255, 0.87);
-    background-color: #242424;
+    --popover-bg: #ffffff;
+    --popover-border-color: #ddd;
+    --popover-text-color: #212529;
+    --popover-header-bg: #f8f9fa;
+    --popover-header-color: #000;
 
-    font-synthesis: none;
-    text-rendering: optimizeLegibility;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+    --filter-border-type: #0d6efd;
+    --filter-border-status: #198754;
+    --filter-border-created: #fd7e14;
+    --filter-border-modified: #6f42c1;
+
+    --filter-clear-btn-color: #6c757d;
+    --filter-clear-btn-hover-color: #000;
 }
 
-a {
-    font-weight: 500;
-    color: #646cff;
-    text-decoration: inherit;
+/* Dark Theme */
+[data-theme="dark"] {
+    --filter-btn-color: #66b2ff;
+    --filter-btn-hover-bg: #1f2937;
+    --filter-btn-hover-color: #ffffff;
+
+    --popover-bg: #1e1e1e;
+    --popover-border-color: #333;
+    --popover-text-color: #f1f1f1;
+    --popover-header-bg: #2c2c2c;
+    --popover-header-color: #ffffff;
+
+    --filter-border-type: #339af0;
+    --filter-border-status: #4caf50;
+    --filter-border-created: #ff9800;
+    --filter-border-modified: #ab47bc;
+
+    --filter-clear-btn-color: #aaa;
+    --filter-clear-btn-hover-color: #fff;
 }
 
-a:hover {
-    color: #535bf2;
+/* theme.scss */
+
+/* ===== Base Theme Variables ===== */
+:root {
+    /* Backgrounds */
+    --bg-color: #ffffff;
+    --text-color: #000000;
+
+    /* Modal */
+    --modal-bg: #ffffff;
+    --modal-header-bg: #f8f9fa;
+    --modal-text-color: #000000;
+
+    /* Form */
+    --form-bg: #ffffff;
+    --form-border-color: #ced4da;
+    --form-text-color: #000000;
+    --form-placeholder-color: #6c757d;
+
+    /* Buttons */
+    --btn-bg: #0d6efd;
+    --btn-text: #ffffff;
 }
 
-body {
-    margin: 0;
-    display: flex;
-    place-items: center;
-    min-width: 320px;
-    min-height: 100vh;
+/* ===== Dark Theme Variables ===== */
+[data-theme="dark"] {
+    --bg-color: #121212;
+    --text-color: #e9ecef;
+
+    /* Modal */
+    --modal-bg: #1e1e1e;
+    --modal-header-bg: #2a2a2a;
+    --modal-text-color: #e9ecef;
+
+    /* Form */
+    --form-bg: #1e1e1e;
+    --form-border-color: #444;
+    --form-text-color: #e9ecef;
+    --form-placeholder-color: #aaa;
+
+    /* Buttons */
+    --btn-bg: #0d6efd;
+    --btn-text: #ffffff;
 }
 
-h1 {
-    font-size: 3.2em;
-    line-height: 1.1;
+/* ===== Apply Theme to Modal ===== */
+.modal-content {
+    background-color: var(--modal-bg) !important;
+    color: var(--modal-text-color) !important;
+    border: 1px solid var(--form-border-color) !important;
 }
 
-button {
-    border-radius: 8px;
-    border: 1px solid transparent;
-    padding: 0.6em 1.2em;
-    font-size: 1em;
-    font-weight: 500;
-    font-family: inherit;
-    background-color: #1a1a1a;
-    cursor: pointer;
-    transition: border-color 0.25s;
+.modal-header {
+    background-color: var(--modal-header-bg) !important;
+    color: var(--modal-text-color) !important;
+    border-bottom: 1px solid var(--form-border-color) !important;
 }
 
-button:hover {
-    border-color: #646cff;
+.modal-body {
+    background-color: var(--modal-bg) !important;
+    color: var(--modal-text-color) !important;
 }
 
-button:focus,
-button:focus-visible {
-    outline: 4px auto -webkit-focus-ring-color;
+.modal-footer {
+    background-color: var(--modal-header-bg) !important;
+    border-top: 1px solid var(--form-border-color) !important;
 }
 
-@media (prefers-color-scheme: light) {
-    :root {
-        color: #213547;
-        background-color: #ffffff;
+/* ===== Apply Theme to Form ===== */
+.form-control {
+    background-color: var(--form-bg) !important;
+    color: var(--form-text-color) !important;
+    border: 1px solid var(--form-border-color) !important;
+
+    &::placeholder {
+        color: var(--form-placeholder-color) !important;
     }
 
-    a:hover {
-        color: #747bff;
+    &:focus {
+        border-color: var(--btn-bg) !important;
+        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25) !important;
+    }
+}
+
+/* Form labels */
+.form-label {
+    color: var(--form-text-color) !important;
+}
+
+/* ===== Buttons ===== */
+.btn-primary {
+    background-color: var(--btn-bg) !important;
+    color: var(--btn-text) !important;
+    border: none !important;
+}
+
+body[data-theme='dark'] .btn-primary:hover {
+    background-color: darken(var(--btn-bg), 10%) !important;
+}
+
+/* ===== Apply Theme to Select Dropdowns ===== */
+.form-select {
+    background-color: var(--form-bg) !important;
+    color: var(--form-text-color) !important;
+    border: 1px solid var(--form-border-color) !important;
+
+    &::placeholder {
+        color: var(--form-placeholder-color) !important;
     }
 
-    button {
-        background-color: #f9f9f9;
+    &:focus {
+        border-color: var(--btn-bg) !important;
+        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25) !important;
     }
+}
+
+/* Dropdown arrow in dark mode */
+[data-theme="dark"] .form-select {
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='%23e9ecef' d='M7.247 11.14l-4.796-5.481C2.077 5.384 2.323 5 2.75 5h10.5a.5.5 0 01.38.84l-4.796 5.48a.5.5 0 01-.76 0z'/%3e%3c/svg%3e") !important;
+}
+
+[data-theme="dark"] .text-muted {
+    color: #aaa !important;
 }

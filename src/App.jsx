@@ -11,20 +11,21 @@ import Home from './pages/Home';
 import Solution from './pages/Solution';
 import ExpenseManager from './pages/ExpenseManager';
 import CollectedCashManager from './pages/CollectedCashManager';
-
-import { AlertProvider } from './utils/AlertUtil';
+import { ThemeProvider } from './utils/ThemeContext';
 import CreateUserBySuperAdmin from './pages/CreateUserBySuperAdmin';
 import ChangePassword from './pages/ChangePassword';
+import ForgotPasswordFlow from './pages/ForgotPasswordFlow';
 
 const App = () => {
     return (
         <Router>
-            <AlertProvider>
+            <ThemeProvider>
                 <Routes>
                     {/* Public Routes */}
                     <Route path="/login" element={<LoginPage />} />
                     <Route path="/register" element={<RegisterPage />} />
                     <Route path='/change-password' element={<ChangePassword />} />
+                    <Route path='/forgot-password' element={<ForgotPasswordFlow />} />
 
                     {/* Protected Routes */}
                     <Route element={<ProtectedRoute />}>
@@ -41,7 +42,7 @@ const App = () => {
                     {/* Fallback - redirect unknown paths to login */}
                     <Route path="*" element={<LoginPage />} />
                 </Routes>
-            </AlertProvider>
+            </ThemeProvider>
         </Router>
     );
 };

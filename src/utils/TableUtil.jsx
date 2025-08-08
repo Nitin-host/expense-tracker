@@ -10,9 +10,9 @@ function TableUtil({
     tableData = [],
     tableHeader = [],
     tableActions = [],
-    searchKeys = [], // Keys to search on, eg ['name', 'category']
-    filterKeys = [], // [{ label, key, options }]
-    filters = {}, // Selected filter values: { category: ['Food', 'Travel'], status: ['Paid'] }
+    searchKeys = [],
+    filterKeys = [],
+    filters = {},
     setFilters = () => { },
     getCardBorderColor,
 }) {
@@ -22,10 +22,14 @@ function TableUtil({
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [mobileView, setMobileView] = useState(isMobile());
+    const [theme, setTheme] = useState(
+        typeof document !== 'undefined'
+            ? document.body.getAttribute('data-theme') || 'light'
+            : 'light'
+    );
 
     useEffect(() => {
         setFilterVals((prevFilters) => {
-            // Simple deep equality check using JSON stringify
             if (JSON.stringify(prevFilters) !== JSON.stringify(filters)) {
                 return filters;
             }
@@ -34,11 +38,19 @@ function TableUtil({
     }, [filters]);
 
     useEffect(() => {
-        const onResize = () => {
-            setMobileView(isMobile());
-        };
+        const onResize = () => setMobileView(isMobile());
         window.addEventListener('resize', onResize);
-        return () => window.removeEventListener('resize', onResize);
+
+        const themeObserver = new MutationObserver(() => {
+            const currentTheme = document.body.getAttribute('data-theme') || 'light';
+            setTheme(currentTheme);
+        });
+        themeObserver.observe(document.body, { attributes: true, attributeFilter: ['data-theme'] });
+
+        return () => {
+            window.removeEventListener('resize', onResize);
+            themeObserver.disconnect();
+        };
     }, []);
 
     const getNestedValue = (obj, path) =>
@@ -110,6 +122,21 @@ function TableUtil({
         return current;
     }
 
+    const hasVisibleActions = React.useMemo(() => {
+        if (!tableActions || tableActions.length === 0) return false;
+        if (pagedData.length === 0) return false;
+
+        return pagedData.some(row =>
+            tableActions.some(action => {
+                if (typeof action.isVisible === 'function') {
+                    return action.isVisible(row);
+                }
+                return action.isVisible !== false; // if boolean and not false, assume visible
+            })
+        );
+    }, [tableActions, pagedData]);
+
+
     const renderCell = (row, key, format, colDef) => {
         const val = getValueByPath(row, key);
 
@@ -146,6 +173,9 @@ function TableUtil({
                 style={{
                     borderLeft: `6px solid ${borderColor}`,
                     paddingLeft: '12px',
+                    backgroundColor:
+                        theme === 'dark' ? 'var(--table-bg)' : 'var(--table-bg)',
+                    color: 'var(--table-text)',
                 }}>
                 <Card.Body>
                     {tableHeader.map(({ label, key, dataFormat }, idx) => (
@@ -226,7 +256,7 @@ function TableUtil({
                                         {label} {sortConfig.index === idx ? (sortConfig.asc ? '▲' : '▼') : ''}
                                     </th>
                                 ))}
-                                {tableActions && tableActions.length > 0 && <th>Actions</th>}
+                                {hasVisibleActions && <th>Actions</th>}
                             </tr>
                         </thead>
                         <tbody>

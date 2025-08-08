@@ -3,6 +3,7 @@ import api from '../api/http';
 import { Card, Spinner, Alert, Row, Col, ListGroup } from 'react-bootstrap';
 import { useParams } from 'react-router-dom';
 import Chart from 'react-apexcharts';
+import '../styles/Dashboard.scss';
 
 const Dashboard = () => {
     const { id: solutionCardId } = useParams();
@@ -79,7 +80,7 @@ const Dashboard = () => {
             <Row className="mb-4">
                 {/* Total Collected Cash */}
                 <Col md={4} sm={12} className="mb-3">
-                    <Card bg="light" text="dark" className="shadow-sm border-success">
+                    <Card className="dashboard-card shadow-sm border-success">
                         <Card.Body>
                             <Card.Title>Total Collected Cash (Budget)</Card.Title>
                             <h3 className="text-success">
@@ -91,7 +92,7 @@ const Dashboard = () => {
 
                 {/* Total Expenses */}
                 <Col md={4} sm={12} className="mb-3">
-                    <Card bg="light" text="dark" className="shadow-sm border-warning">
+                    <Card className="shadow-sm border-warning">
                         <Card.Body>
                             <Card.Title>Total Expenses</Card.Title>
                             <h3 className="text-warning">₹{totalExpenses.toLocaleString()}</h3>

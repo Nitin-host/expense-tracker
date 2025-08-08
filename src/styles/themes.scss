@@ -262,7 +262,7 @@ body.light-theme,
 
 /* Main content area */
 .main-content {
-    min-height: 100vh;
+    // min-height: 100vh;
     padding: 1rem;
     overflow-y: auto;
     transition: margin-left 0.3s ease;
@@ -295,7 +295,7 @@ body.light-theme,
 
 // Toggle button
 .icon-toggle-btn {
-    background: none !important;
+    background-color: transparent !important;
     border: none !important;
     box-shadow: none;
     outline: none;
@@ -310,7 +310,7 @@ body.light-theme,
     &:hover,
     &:focus {
         color: #0d6efd;
-        background: none !important;
+        background: transparent !important;
         outline: none;
         box-shadow: none;
     }
