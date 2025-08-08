@@ -4,14 +4,14 @@ import { Button, Modal, Form, Alert, Spinner } from 'react-bootstrap';
 import { FaEdit, FaTrashAlt } from 'react-icons/fa';
 import api from '../api/http';
 import { useParams } from 'react-router-dom';
-import { useAlert } from '../utils/AlertUtil'; // import the alert hook
+import { useAlert } from '../utils/AlertUtil'; // alert hook
 
 function CollectedCashManager() {
     const { id: solutionId } = useParams();
 
     const [collectedCashList, setCollectedCashList] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(''); // only for form validation errors
+    const [error, setError] = useState(''); // form validation errors
 
     const [showForm, setShowForm] = useState(false);
     const [editableCash, setEditableCash] = useState(null);
@@ -23,9 +23,12 @@ function CollectedCashManager() {
         amount: '',
     });
 
-    const { notifySuccess, notifyError } = useAlert(); // get notify functions
+    const { notifySuccess, notifyError } = useAlert(); // notify functions
 
-    // Fetch collected cash entries for solution
+    // Store accessLevel returned from API (e.g., 'owner', 'editor', 'viewer')
+    const [accessLevel, setAccessLevel] = useState(null);
+
+    // Fetch collected cash entries and accessLevel for solution
     useEffect(() => {
         async function fetchCollectedCash() {
             setLoading(true);
@@ -33,6 +36,13 @@ function CollectedCashManager() {
             try {
                 const res = await api.get(`/collected-cash/solution/${solutionId}`);
                 setCollectedCashList(res.data.collectedCash || []);
+
+                // IMPORTANT: Ensure your backend sends accessLevel in the response
+                if (res.data.accessLevel) {
+                    setAccessLevel(res.data.accessLevel);
+                } else {
+                    setAccessLevel(null);
+                }
             } catch {
                 notifyError('Failed to load collected cash data');
             } finally {
@@ -141,12 +151,15 @@ function CollectedCashManager() {
             btnClass: 'btn btn-sm btn-outline-primary',
             iconComponent: FaEdit,
             btnAction: openEditForm,
+            // use a function to decide visibility based on accessLevel and row if needed
+            isVisible: () => accessLevel === 'owner' || accessLevel === 'editor',
         },
         {
             btnTitle: 'Delete',
             btnClass: 'btn btn-sm btn-outline-danger',
             iconComponent: FaTrashAlt,
             btnAction: (cash) => setDeleteModal({ show: true, collectedCash: cash }),
+            isVisible: () => accessLevel === 'owner' || accessLevel === 'editor',
         },
     ];
 
@@ -167,9 +180,11 @@ function CollectedCashManager() {
 
     return (
         <>
-            <Button variant="primary" className="mb-3" onClick={openAddForm}>
-                Add Collected Cash
-            </Button>
+            {(accessLevel === 'owner' || accessLevel === 'editor') && (
+                <Button variant="primary" className="mb-3" onClick={openAddForm}>
+                    Add Collected Cash
+                </Button>
+            )}
 
             <TableUtil
                 tableName="Collected Cash"
@@ -177,6 +192,7 @@ function CollectedCashManager() {
                 tableHeader={tableHeader}
                 tableActions={actions}
                 searchKeys={['name']}
+                accessLevel={accessLevel}
             />
 
             <Modal show={showForm} onHide={closeForm} centered>

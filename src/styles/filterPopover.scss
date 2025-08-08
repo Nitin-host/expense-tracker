@@ -1,14 +1,42 @@
-// filterPopover.scss
+/* ================================
+   Filter Popover - Theme Aware
+=================================== */
+
+/* Trigger button */
 .filter-trigger-btn {
     border: none;
-    color: #1976d2;
+    color: var(--filter-btn-color) !important;
     display: flex;
     align-items: center;
     padding: 0.25rem 0.5rem;
     background: transparent;
     box-shadow: none;
+    transition: background-color 0.2s ease, color 0.2s ease;
+
+    &:hover {
+        background-color: var(--filter-btn-hover-bg) !important;
+        color: var(--filter-btn-hover-color, var(--filter-btn-color)) !important;
+    }
 }
 
+/* Popover wrapper */
+.filter-popover {
+    --bs-popover-bg: var(--popover-bg) !important;
+    --bs-popover-border-color: var(--popover-border-color) !important;
+    color: var(--popover-text-color) !important;
+
+    .popover-header {
+        background-color: var(--popover-header-bg) !important;
+        color: var(--popover-header-color) !important;
+        border-bottom: 1px solid var(--popover-border-color) !important;
+    }
+
+    .popover-body {
+        padding-bottom: 0.7rem;
+    }
+}
+
+/* Filter container layout */
 .filter-popover .filter-container {
     display: flex;
     flex-wrap: wrap;
@@ -33,31 +61,42 @@
     }
 }
 
-.filter-popover .popover-body {
-    padding-bottom: 0.7rem;
-}
-
-/* Filter select border colors for each filter type */
+/* Filter select borders (theme aware) */
 .filter-select.type {
-    border-color: #2574a9;
+    background-color: var(-popover-bg) !important;
+    border-color: var(--filter-border-type) !important;
 }
 
 .filter-select.status {
-    border-color: #27ae60;
+    border-color: var(--filter-border-status) !important;
 }
 
 .filter-select.created {
-    border-color: #9b59b6;
+    border-color: var(--filter-border-created) !important;
 }
 
 .filter-select.modified {
-    border-color: #34495e;
+    border-color: var(--filter-border-modified) !important;
 }
 
+/* Clear button inside filter */
+.filter-clear-btn {
+    margin-top: 0.25rem;
+    padding: 0;
+    font-size: 0.8rem;
+    color: var(--filter-clear-btn-color) !important;
+
+    &:hover {
+        color: var(--filter-clear-btn-hover-color) !important;
+        text-decoration: underline;
+    }
+}
+
+/* Override Bootstrap outline-primary to work with theme */
 .btn-outline-primary {
-    --bs-btn-border-color: none !important
-}
-
-.btn:hover {
-    background-color: none !important;
+    --bs-btn-color: var(--filter-btn-color) !important;
+    --bs-btn-border-color: transparent;
+    --bs-btn-hover-bg: var(--filter-btn-hover-bg) !important;
+    --bs-btn-hover-color: var(--filter-btn-hover-color, var(--filter-btn-color)) !important;
+    --bs-btn-hover-border-color: transparent;
 }

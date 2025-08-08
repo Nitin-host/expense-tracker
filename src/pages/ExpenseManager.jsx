@@ -26,6 +26,7 @@ function ExpenseManager() {
     const [deleteModal, setDeleteModal] = useState({ show: false, expense: null });
 
     const { notifySuccess, notifyError } = useAlert(); // Destructure alert functions
+    const [accessLevel, setAccessLevel] = useState(null);
 
     const openImageModal = (expense) => {
         const urls = expense.payments.flatMap(p =>
@@ -57,6 +58,11 @@ function ExpenseManager() {
             try {
                 const res = await api.get(`/expense/solution-card/${solutionId}`);
                 setExpenses(res.data.expenses || []);
+                if (res.data.accessLevel) {
+                    setAccessLevel(res.data.accessLevel);
+                } else {
+                    setAccessLevel(null);
+                }
             } catch {
                 notifyError('Failed to load expenses');
             } finally {
@@ -120,12 +126,14 @@ function ExpenseManager() {
             btnClass: 'btn btn-sm btn-outline-primary',
             iconComponent: FaEdit,
             btnAction: openEditForm,
+            isVisible: () => accessLevel === 'owner' || accessLevel === 'editor',
         },
         {
             btnTitle: 'Delete',
             btnClass: 'btn btn-sm btn-outline-danger',
             iconComponent: FaTrashAlt,
             btnAction: (expense) => setDeleteModal({ show: true, expense }),
+            isVisible: () => accessLevel === 'owner' || accessLevel === 'editor',
         }
     ];
 
@@ -171,10 +179,11 @@ function ExpenseManager() {
 
     return (
         <>
-            <Button variant="primary" className="mb-3" onClick={openAddForm}>
-                Add Expense
-            </Button>
-
+            {(accessLevel === 'owner' || accessLevel === 'editor') && (
+                <Button variant="primary" className="mb-3" onClick={openAddForm}>
+                    Add Expense
+                </Button>
+            )}
             <TableUtil
                 tableName="Expenses"
                 tableData={expenses}

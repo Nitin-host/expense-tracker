@@ -1,18 +1,61 @@
-.auth-bg-wrapper {
-    min-height: 100vh;
-    min-width: 100vw;
-    background: url('/expense-background.avif') no-repeat center center fixed;
-    background-size: cover;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+body[data-theme='light'] {
+    .auth-bg-wrapper {
+        min-height: 100vh;
+        min-width: 100vw;
+        background: url('/expense-background.avif') no-repeat center center fixed;
+        background-size: cover;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .auth-card {
+        background: rgba(255, 255, 255, 0.97);
+        border-radius: 18px;
+        box-shadow: 0 4px 32px rgba(0, 0, 0, 0.22);
+        padding: 2.5rem 2rem 2rem;
+        max-width: 400px;
+        width: 100%;
+        color: #333;
+    }
+
+    a {
+        color: #007bff;
+    }
 }
 
-.auth-card {
-    background: rgba(255, 255, 255, 0.97);
-    border-radius: 18px;
-    box-shadow: 0 4px 32px rgba(0, 0, 0, 0.22);
-    padding: 2.5rem 2rem 2rem 2rem;
-    max-width: 400px;
-    width: 100%;
+body[data-theme='dark'] {
+    .auth-bg-wrapper {
+        min-height: 100vh;
+        min-width: 100vw;
+        background: url('/expense-background.avif') no-repeat center center fixed;
+        background-size: cover;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .auth-card {
+        background: rgba(32, 32, 32, 0.85);
+        border-radius: 18px;
+        box-shadow: 0 4px 32px rgba(0, 0, 0, 0.9);
+        padding: 2.5rem 2rem 2rem;
+        max-width: 400px;
+        width: 100%;
+        color: #ddd;
+    }
+
+    .auth-card .form-control {
+        background-color: #222;
+        border: 1px solid #555;
+        color: #eee;
+    }
+
+    .auth-card .form-control::placeholder {
+        color: #999;
+    }
+
+    a {
+        color: #82cfff;
+    }
 }

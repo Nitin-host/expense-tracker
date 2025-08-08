@@ -4,7 +4,7 @@ import api from '../api/http';
 import { useAlert } from '../utils/AlertUtil';
 
 import SolutionCard from '../components/SolutionCard';
-import SolutionModal from '../components/SolutionModal'; // reuse your existing modal code
+import SolutionModal from '../components/SolutionModal';
 import ShareSolutionModal from '../components/ShareSolutionModal';
 import '../styles/solution.scss'
 
@@ -76,7 +76,6 @@ export default function Solution() {
             </div>}
             {!loading &&
                 <>
-
                     <Row className="mb-3">
                         <Col><h3>Solutions ({solutions.length})</h3></Col>
                         <Col className="text-end">
@@ -86,9 +85,11 @@ export default function Solution() {
 
                     {error && <div className="alert alert-danger">{error}</div>}
 
-                    <Row xs={1} sm={2} md={3} lg={4} className="g-4">
+                    {/* NOTE: each Col is a flex container (d-flex) so card can stretch */}
+                    <Row xs={1} sm={2} md={3} lg={4} className="g-4 align-items-stretch">
                         {solutions.map((solution) => (
-                            <Col key={solution._id}>
+                            // d-flex ensures the child (card) can stretch to full column height
+                            <Col key={solution._id} className="d-flex">
                                 <SolutionCard
                                     solution={solution}
                                     onEdit={setEditSolution}
