@@ -1,22 +1,31 @@
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react-swc';
+import path from 'path';
 
 export default defineConfig(({ mode }) => {
-    // Load environment variables for the current mode
     const env = loadEnv(mode, process.cwd(), '');
 
     return {
         plugins: [react()],
         server: {
-            proxy: {
-                // Proxy only when running dev and point to local backend without /api duplication
-                '/api': env.VITE_API_URL && env.VITE_API_URL.includes('localhost')
-                    ? env.VITE_API_URL.replace(/\/api$/, '')  // remove trailing /api if present
-                    : null,
-            }
+            proxy: env.VITE_API_URL && env.VITE_API_URL.includes('localhost')
+                ? {
+                    '/api': {
+                        target: env.VITE_API_URL.replace(/\/api$/, ''),
+                        changeOrigin: true,
+                        secure: false,
+                    }
+                }
+                : undefined,
         },
         resolve: {
             dedupe: ['react', 'react-dom'],
+            alias: {
+                '@': path.resolve(__dirname, './src'),
+            }
         },
+        build: {
+            outDir: 'dist',
+        }
     };
 });
