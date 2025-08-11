@@ -131,7 +131,7 @@ const Dashboard = () => {
 
                 {/* Recent Lists */}
                 <Col xs={12} lg={6}>
-                    <Row>
+                    <Row className='mt-3'>
                         {/* Recent Expenses */}
                         <Col xs={12} md={6} className="mb-4">
                             <Card className="shadow-sm">

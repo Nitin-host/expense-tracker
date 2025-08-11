@@ -60,9 +60,22 @@ export default function ShareSolutionModal({ show, onHide, solution, onDone, onS
                     }))
                 );
             })
-            .catch(() => setAllUsers([]));
+            .catch((err) => {
+                console.error('err')
+                setAllUsers([])
+            });
 
-        if (solution) setSharedUsers(solution.sharedWith || []);
+        if (solution) {
+            const ownerEntry = {
+                user: solution.owner._id,
+                name: solution.owner.name,
+                email: solution.owner.email,
+                role: 'owner'
+            };
+
+            setSharedUsers([ownerEntry, ...(solution.sharedWith || [])]);
+        }
+
         setSelectedUsers([]);
         setNotify(false);
     }, [show, solution]);
