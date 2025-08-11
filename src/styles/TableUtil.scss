@@ -18,6 +18,10 @@ body[data-theme="dark"] {
     --table-border: #444;
     --btn-action-color: #66aaff;
     --btn-action-hover: #4477cc;
+    --pagination-bg: #1f1f2f;
+    --pagination-text: #66aaff;
+    --pagination-active-bg: #66aaff;
+    --pagination-active-text: #1f1f2f;
 }
 
 /* ===================================
@@ -85,4 +89,24 @@ table tbody tr:hover {
 .cell-pending-none {
     color: #888b8e;
     font-weight: 600;
+}
+
+/* ===================================
+   PAGINATION (THEME-BASED)
+   =================================== */
+.pagination .page-link {
+    background-color: var(--pagination-bg) !important;
+    color: var(--pagination-text) !important;
+    border: 1px solid var(--table-border) !important;
+}
+
+.pagination .page-link:hover {
+    background-color: var(--btn-action-hover) !important;
+    color: #fff !important;
+}
+
+.pagination .page-item.active .page-link {
+    background-color: var(--pagination-active-bg) !important;
+    color: var(--pagination-active-text) !important;
+    border-color: var(--pagination-active-bg) !important;
 }

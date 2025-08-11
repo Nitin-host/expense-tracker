@@ -6,6 +6,7 @@ import { useAlert } from '../utils/AlertUtil';
 import SolutionCard from '../components/SolutionCard';
 import SolutionModal from '../components/SolutionModal';
 import ShareSolutionModal from '../components/ShareSolutionModal';
+import noSolutions from '/svg/solution.svg';
 import '../styles/solution.scss'
 
 export default function Solution() {
@@ -87,8 +88,22 @@ export default function Solution() {
 
                     {/* NOTE: each Col is a flex container (d-flex) so card can stretch */}
                     <Row xs={1} sm={2} md={3} lg={4} className="g-4 align-items-stretch">
+                        {solutions.length === 0 && (
+                            <div
+                                className="d-flex flex-column align-items-center justify-content-center text-center w-100"
+                                style={{ minHeight: '60vh' }}
+                            >
+                                <img
+                                    src={noSolutions}
+                                    alt="No Solutions"
+                                    style={{ maxWidth: '350px', height: 'auto' }}
+                                />
+                                <p className="mt-3" style={{ color: 'var(--table-text)' }}>
+                                    You don’t have any solutions yet. Start by creating one.
+                                </p>
+                            </div>
+                        )}
                         {solutions.map((solution) => (
-                            // d-flex ensures the child (card) can stretch to full column height
                             <Col key={solution._id} className="d-flex">
                                 <SolutionCard
                                     solution={solution}

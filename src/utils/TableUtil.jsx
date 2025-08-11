@@ -212,7 +212,7 @@ function TableUtil({
 
     return (
         <div>
-            {/* Header with Filter Icon and Search */}
+
             <div className="d-flex justify-content-between flex-wrap align-items-center p-3">
                 <h5>{tableName}</h5>
                 <div className="d-flex align-items-center">
@@ -244,88 +244,87 @@ function TableUtil({
                     )}
                 </div>
             ) : (
-                <>
-                    <Table striped bordered hover responsive>
-                        <thead>
-                            <tr>
-                                {tableHeader.map(({ label }, idx) => (
-                                    <th
-                                        key={idx}
-                                        style={{ cursor: 'pointer', userSelect: 'none' }}
-                                        onClick={() => handleSort(idx)}>
-                                        {label} {sortConfig.index === idx ? (sortConfig.asc ? '▲' : '▼') : ''}
-                                    </th>
-                                ))}
-                                {hasVisibleActions && <th>Actions</th>}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {pagedData.length === 0 ? (
-                                <tr>
-                                    <td colSpan={tableHeader.length + (tableActions && tableActions.length ? 1 : 0)}>
-                                        No data found
-                                    </td>
-                                </tr>
-                            ) : (
-                                pagedData.map((row) => (
-                                    <tr key={row._id || row.id}>
-                                        {tableHeader.map((colDef, idx) => (
-                                            <td key={idx}>{renderCell(row, colDef.key, colDef.dataFormat, colDef)}</td>
-                                        ))}
-                                        {tableActions && tableActions.length > 0 && (
-                                            <td>
-                                                {tableActions.map(
-                                                    ({ btnTitle, btnClass, iconComponent: Icon, btnAction, isVisible }, idx) => {
-                                                        if (typeof isVisible === 'function' && !isVisible(row)) return null;
-                                                        return (
-                                                            <Button
-                                                                key={idx}
-                                                                className={'table-action-btn' || btnClass}
-                                                                size="sm"
-                                                                onClick={() => btnAction(row)}
-                                                                title={btnTitle}
-                                                                variant={btnClass?.includes('outline') ? undefined : 'outline-primary'}
-                                                                style={{ marginRight: '6px', marginBottom: '4px' }}
-                                                            >
-                                                                {Icon && <Icon style={{ marginRight: 4 }} />}
-                                                            </Button>
-                                                        );
-                                                    }
-                                                )}
-                                            </td>
-                                        )}
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </Table>
-                    {/* Pagination */}
-                    {totalPages > 1 && (
-                        <Pagination className="justify-content-center my-3">
-                            <Pagination.First onClick={() => setCurrentPage(1)} disabled={currentPage === 1} />
-                            <Pagination.Prev
-                                onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-                                disabled={currentPage === 1}
-                            />
-                            {[...Array(totalPages)].map((_, idx) => (
-                                <Pagination.Item
+                <Table striped bordered hover responsive>
+                    <thead>
+                        <tr>
+                            {tableHeader.map(({ label }, idx) => (
+                                <th
                                     key={idx}
-                                    active={currentPage === idx + 1}
-                                    onClick={() => setCurrentPage(idx + 1)}>
-                                    {idx + 1}
-                                </Pagination.Item>
+                                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                                    onClick={() => handleSort(idx)}>
+                                    {label} {sortConfig.index === idx ? (sortConfig.asc ? '▲' : '▼') : ''}
+                                </th>
                             ))}
-                            <Pagination.Next
-                                onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-                                disabled={currentPage === totalPages}
-                            />
-                            <Pagination.Last
-                                onClick={() => setCurrentPage(totalPages)}
-                                disabled={currentPage === totalPages}
-                            />
-                        </Pagination>
-                    )}
-                </>
+                            {hasVisibleActions && <th>Actions</th>}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {pagedData.length === 0 ? (
+                            <tr>
+                                <td colSpan={tableHeader.length + (tableActions && tableActions.length ? 1 : 0)}>
+                                    No data found
+                                </td>
+                            </tr>
+                        ) : (
+                            pagedData.map((row) => (
+                                <tr key={row._id || row.id}>
+                                    {tableHeader.map((colDef, idx) => (
+                                        <td key={idx}>{renderCell(row, colDef.key, colDef.dataFormat, colDef)}</td>
+                                    ))}
+                                    {tableActions && tableActions.length > 0 && (
+                                        <td>
+                                            {tableActions.map(
+                                                ({ btnTitle, btnClass, iconComponent: Icon, btnAction, isVisible }, idx) => {
+                                                    if (typeof isVisible === 'function' && !isVisible(row)) return null;
+                                                    return (
+                                                        <Button
+                                                            key={idx}
+                                                            className={'table-action-btn' || btnClass}
+                                                            size="sm"
+                                                            onClick={() => btnAction(row)}
+                                                            title={btnTitle}
+                                                            variant={btnClass?.includes('outline') ? undefined : 'outline-primary'}
+                                                            style={{ marginRight: '6px', marginBottom: '4px' }}
+                                                        >
+                                                            {Icon && <Icon style={{ marginRight: 4 }} />}
+                                                        </Button>
+                                                    );
+                                                }
+                                            )}
+                                        </td>
+                                    )}
+                                </tr>
+                            ))
+                        )}
+                    </tbody>
+                </Table>
+            )}
+
+            {/* Shared Pagination for both views */}
+            {totalPages > 1 && (
+                <Pagination className={`justify-content-center my-3 pagination-${theme}`}>
+                    <Pagination.First onClick={() => setCurrentPage(1)} disabled={currentPage === 1} />
+                    <Pagination.Prev
+                        onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+                        disabled={currentPage === 1}
+                    />
+                    {[...Array(totalPages)].map((_, idx) => (
+                        <Pagination.Item
+                            key={idx}
+                            active={currentPage === idx + 1}
+                            onClick={() => setCurrentPage(idx + 1)}>
+                            {idx + 1}
+                        </Pagination.Item>
+                    ))}
+                    <Pagination.Next
+                        onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+                        disabled={currentPage === totalPages}
+                    />
+                    <Pagination.Last
+                        onClick={() => setCurrentPage(totalPages)}
+                        disabled={currentPage === totalPages}
+                    />
+                </Pagination>
             )}
         </div>
     );
