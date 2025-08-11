@@ -118,66 +118,69 @@ const Dashboard = () => {
                 </Col>
             </Row>
 
-            {/* Pie Chart and Recent Lists */}
             <Row>
-                {/* Pie Chart: Expense vs Collected Cash */}
-                <Col xs={12} md={8} className="mb-4">
+                {/* Pie Chart */}
+                <Col xs={12} lg={6} className="mb-4">
                     <Card className="shadow-sm">
                         <Card.Body>
                             <Card.Title>Expense vs Collected Cash</Card.Title>
                             <Chart options={pieOptions} series={pieSeries} type="pie" height={350} />
                         </Card.Body>
                     </Card>
-
-                </Col>
-                <Col xs={12} md={4}>
-                    {/* Recent Expenses List */}
-                    <Card className="shadow-sm mt-4">
-                        <Card.Body>
-                            <Card.Title>Recent Expenses Added</Card.Title>
-                            {recentExpenses.length === 0 ? (
-                                <p>No recent expenses</p>
-                            ) : (
-                                <ListGroup>
-                                    {recentExpenses.map((expense) => (
-                                        <ListGroup.Item key={expense.id}>
-                                            <span className="fw-bold">{expense.name}</span>
-                                            <span className="float-end text-warning">
-                                                ₹{expense.amount.toLocaleString()} –{' '}
-                                                {new Date(expense.date).toLocaleDateString()}
-                                            </span>
-                                        </ListGroup.Item>
-                                    ))}
-                                </ListGroup>
-                            )}
-                        </Card.Body>
-                    </Card>
                 </Col>
 
-                {/* Recent Collected Cash List */}
-                <Col xs={12} md={4}>
-                    <Card className="shadow-sm">
-                        <Card.Body>
-                            <Card.Title>Recent Collected Cash Added</Card.Title>
-                            {recentCollectedCash.length === 0 ? (
-                                <p>No recent collected cash</p>
-                            ) : (
-                                <ListGroup>
-                                    {recentCollectedCash.map((cash) => (
-                                        <ListGroup.Item key={cash.id}>
-                                            <span className="fw-bold">{cash.name}</span>
-                                            <span className="float-end text-success">
-                                                ₹{cash.amount.toLocaleString()} –{' '}
-                                                {new Date(cash.date).toLocaleDateString()}
-                                            </span>
-                                        </ListGroup.Item>
-                                    ))}
-                                </ListGroup>
-                            )}
-                        </Card.Body>
-                    </Card>
+                {/* Recent Lists */}
+                <Col xs={12} lg={6}>
+                    <Row>
+                        {/* Recent Expenses */}
+                        <Col xs={12} md={6} className="mb-4">
+                            <Card className="shadow-sm">
+                                <Card.Body>
+                                    <Card.Title>Recent Expenses Added</Card.Title>
+                                    {recentExpenses.length === 0 ? (
+                                        <p>No recent expenses</p>
+                                    ) : (
+                                        <ListGroup>
+                                            {recentExpenses.map((expense) => (
+                                                <ListGroup.Item key={expense.id}>
+                                                    <span className="fw-bold">{expense.name}</span>
+                                                    <span className="float-end text-warning">
+                                                        ₹{expense.amount.toLocaleString()} – {new Date(expense.date).toLocaleDateString()}
+                                                    </span>
+                                                </ListGroup.Item>
+                                            ))}
+                                        </ListGroup>
+                                    )}
+                                </Card.Body>
+                            </Card>
+                        </Col>
+
+                        {/* Recent Collected Cash */}
+                        <Col xs={12} md={6} className="mb-4">
+                            <Card className="shadow-sm">
+                                <Card.Body>
+                                    <Card.Title>Recent Collected Cash Added</Card.Title>
+                                    {recentCollectedCash.length === 0 ? (
+                                        <p>No recent collected cash</p>
+                                    ) : (
+                                        <ListGroup>
+                                            {recentCollectedCash.map((cash) => (
+                                                <ListGroup.Item key={cash.id}>
+                                                    <span className="fw-bold">{cash.name}</span>
+                                                    <span className="float-end text-success">
+                                                        ₹{cash.amount.toLocaleString()} – {new Date(cash.date).toLocaleDateString()}
+                                                    </span>
+                                                </ListGroup.Item>
+                                            ))}
+                                        </ListGroup>
+                                    )}
+                                </Card.Body>
+                            </Card>
+                        </Col>
+                    </Row>
                 </Col>
             </Row>
+
         </>
     );
 };

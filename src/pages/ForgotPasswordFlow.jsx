@@ -1,6 +1,7 @@
 import { useState } from "react";
 import api from "../api/http";
 import { useAlert } from '../utils/AlertUtil';
+import { Link } from "react-router-dom";
 import BackgroundWrapper from '../utils/BackgroundWrapper';
 import { Form, Button } from 'react-bootstrap';
 
@@ -69,7 +70,10 @@ function ForgotPasswordFlow() {
                                 required
                             />
                         </Form.Group>
-                        <Button onClick={sendOtp} disabled={loading || !email}>
+                        <div className="text-end mb-2">
+                            <Link to="/login" style={{ fontSize: '0.93em' }}>back to login</Link>
+                        </div>
+                        <Button variant="primary" className="w-100 mb-2" onClick={sendOtp} disabled={loading || !email}>
                             {loading ? 'Sending...' : 'Send OTP'}
                         </Button>
                     </>
