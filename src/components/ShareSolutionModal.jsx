@@ -105,14 +105,15 @@ export default function ShareSolutionModal({ show, onHide, solution, onDone, onS
         if (!solution) return;
         setSaving(true);
         try {
-            const owners = sharedUsers.filter((u) => u.role === 'owner');
-            const newShares = [
+            const validShares = [
                 ...selectedUsers.map((u) => ({ user: u.value, role: u.role })),
-                ...sharedUsers.filter((u) => !owners.some((o) => o.user === u.user) && u.role !== 'owner'),
+                ...sharedUsers
+                    .filter((u) => u.role !== 'owner')
+                    .map((u) => ({ user: u.user, role: u.role }))
             ];
 
             await onShare(solution._id, {
-                sharedWith: [...owners, ...newShares],
+                sharedWith: validShares,
                 notifyUsers: notify,
             });
 
