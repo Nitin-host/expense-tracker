@@ -1,17 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import TableUtil from '../utils/TableUtil';
-import { Button, Modal, Form, Alert, Spinner } from 'react-bootstrap';
+import { Button, Modal, Form, Spinner } from 'react-bootstrap';
 import { FaEdit, FaTrashAlt } from 'react-icons/fa';
 import api from '../api/http';
 import { useParams } from 'react-router-dom';
-import { useAlert } from '../utils/AlertUtil'; // alert hook
+import { useAlert } from '../utils/AlertUtil';
 
 function CollectedCashManager() {
     const { id: solutionId } = useParams();
 
     const [collectedCashList, setCollectedCashList] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(''); // form validation errors
 
     const [showForm, setShowForm] = useState(false);
     const [editableCash, setEditableCash] = useState(null);
@@ -23,28 +22,20 @@ function CollectedCashManager() {
         amount: '',
     });
 
-    const { notifySuccess, notifyError } = useAlert(); // notify functions
-
-    // Store accessLevel returned from API (e.g., 'owner', 'editor', 'viewer')
+    const { notifySuccess, notifyError } = useAlert();
     const [accessLevel, setAccessLevel] = useState(null);
 
     // Fetch collected cash entries and accessLevel for solution
     useEffect(() => {
         async function fetchCollectedCash() {
             setLoading(true);
-            setError('');
             try {
                 const res = await api.get(`/collected-cash/solution/${solutionId}`);
                 setCollectedCashList(res.data.collectedCash || []);
-
-                // IMPORTANT: Ensure your backend sends accessLevel in the response
-                if (res.data.accessLevel) {
-                    setAccessLevel(res.data.accessLevel);
-                } else {
-                    setAccessLevel(null);
-                }
-            } catch {
-                notifyError('Failed to load collected cash data');
+                setAccessLevel(res.data.accessLevel || null);
+            } catch (err) {
+                const apiMessage = err?.response?.data?.error?.message;
+                notifyError(apiMessage || 'Failed to load collected cash data');
             } finally {
                 setLoading(false);
             }
@@ -55,7 +46,6 @@ function CollectedCashManager() {
     const openAddForm = () => {
         setEditableCash(null);
         setFormData({ name: '', amount: '' });
-        setError('');
         setShowForm(true);
     };
 
@@ -65,7 +55,6 @@ function CollectedCashManager() {
             name: cash.name,
             amount: cash.amount.toString(),
         });
-        setError('');
         setShowForm(true);
     };
 
@@ -73,7 +62,6 @@ function CollectedCashManager() {
         setEditableCash(null);
         setShowForm(false);
         setFormData({ name: '', amount: '' });
-        setError('');
     };
 
     const handleFormChange = (e) => {
@@ -83,22 +71,20 @@ function CollectedCashManager() {
 
     const handleFormSubmit = async (e) => {
         e.preventDefault();
-        setError('');
 
         if (!formData.name.trim() || !formData.amount.trim()) {
-            setError('Name and Amount are required.');
+            notifyError('Name and Amount are required.');
             return;
         }
 
         if (isNaN(formData.amount) || Number(formData.amount) <= 0) {
-            setError('Amount must be a positive number.');
+            notifyError('Amount must be a positive number.');
             return;
         }
 
         try {
             let res;
             if (editableCash) {
-                // Update existing
                 res = await api.put(`/collected-cash/${editableCash._id}`, {
                     name: formData.name.trim(),
                     amount: Number(formData.amount),
@@ -110,23 +96,20 @@ function CollectedCashManager() {
                     updated[index] = res.data.collectedCash;
                     return updated;
                 });
-
                 notifySuccess('Collected cash updated successfully!');
             } else {
-                // Create new
                 res = await api.post('/collected-cash', {
                     solutionCardId: solutionId,
                     name: formData.name.trim(),
                     amount: Number(formData.amount),
                 });
                 setCollectedCashList(prev => [res.data.collectedCash, ...prev]);
-
                 notifySuccess('Collected cash added successfully!');
             }
-
             closeForm();
-        } catch {
-            notifyError('Failed to save collected cash.');
+        } catch (err) {
+            const apiMessage = err?.response?.data?.error?.message;
+            notifyError(apiMessage || 'Failed to save collected cash.');
         }
     };
 
@@ -138,8 +121,9 @@ function CollectedCashManager() {
             await api.delete(`/collected-cash/${cash._id}`);
             setCollectedCashList(prev => prev.filter(c => c._id !== cash._id));
             notifySuccess('Collected cash entry deleted successfully!');
-        } catch {
-            notifyError('Failed to delete collected cash entry.');
+        } catch (err) {
+            const apiMessage = err?.response?.data?.error?.message;
+            notifyError(apiMessage || 'Failed to delete collected cash entry.');
         } finally {
             setDeleteModal({ show: false, collectedCash: null });
         }
@@ -151,7 +135,6 @@ function CollectedCashManager() {
             btnClass: 'btn btn-sm btn-outline-primary',
             iconComponent: FaEdit,
             btnAction: openEditForm,
-            // use a function to decide visibility based on accessLevel and row if needed
             isVisible: () => accessLevel === 'owner' || accessLevel === 'editor',
         },
         {
@@ -175,8 +158,13 @@ function CollectedCashManager() {
         { label: 'Updated Date', key: 'updatedDate', dataFormat: 'date' }
     ];
 
-    if (loading) return <div className="text-center my-5"><Spinner animation="border" variant="primary" role="status" /></div>;
-    if (error) return <Alert variant="danger">{error}</Alert>;
+    if (loading) {
+        return (
+            <div className="text-center my-5">
+                <Spinner animation="border" variant="primary" role="status" />
+            </div>
+        );
+    }
 
     return (
         <>
@@ -201,7 +189,6 @@ function CollectedCashManager() {
                 </Modal.Header>
                 <Modal.Body>
                     <Form onSubmit={handleFormSubmit}>
-                        {error && <Alert variant="danger">{error}</Alert>}
                         <Form.Group className="mb-3" controlId="collectedCashName">
                             <Form.Label>Name</Form.Label>
                             <Form.Control

@@ -24,6 +24,7 @@ const ChangePassword = () => {
     const { notifySuccess, notifyError } = useAlert();
     const navigate = useNavigate();
     const initialEmail = getQueryParam('email');
+    const isTemp = getQueryParam('temp') === 'true';
 
     const [form, setForm] = useState({
         email: initialEmail,
@@ -39,13 +40,14 @@ const ChangePassword = () => {
     const [loading, setLoading] = useState(false);
     const [passwordError, setPasswordError] = useState('');
     const [confirmError, setConfirmError] = useState('');
-    const [fieldError, setFieldError] = useState(''); // for general missing fields
+    const [fieldError, setFieldError] = useState('');
+    const [expired, setExpired] = useState(false);
+    const [resetLoading, setResetLoading] = useState(false);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
         setForm(prev => ({ ...prev, [name]: value }));
 
-        // Clear errors on change for relevant fields
         if (name === 'newPassword') {
             setPasswordError(validatePassword(value));
             if (form.confirmPassword && form.confirmPassword !== value) {
@@ -95,9 +97,25 @@ const ChangePassword = () => {
             setForm({ email: form.email, oldPassword: '', newPassword: '', confirmPassword: '' });
             setTimeout(() => navigate('/login'), 2000);
         } catch (err) {
-            notifyError(err.response?.data?.message || 'Failed to change password.');
+            const message = err.response?.data?.error?.message || 'Failed to change password.';
+            notifyError(message);
+            if (message.toLowerCase().includes('temporary password expired')) {
+                setExpired(true);
+            }
         }
         setLoading(false);
+    };
+
+    const handleRequestTempPassword = async () => {
+        setResetLoading(true);
+        try {
+            await api.post('/request-temp-password', { email: form.email });
+            notifySuccess('A new temporary password has been sent to your email.');
+            setExpired(false);
+        } catch (err) {
+            notifyError(err.response?.data?.error?.message || 'Failed to request temporary password.');
+        }
+        setResetLoading(false);
     };
 
     return (
@@ -108,7 +126,20 @@ const ChangePassword = () => {
                 </div>
                 <h5 className="mb-2 text-center" style={{ fontWeight: 500 }}>Change Password</h5>
 
-                {/* Field-level general errors */}
+                {expired && (
+                    <div className="alert alert-warning">
+                        Your temporary password has expired.
+                        <Button
+                            variant="link"
+                            className="p-0 ms-1"
+                            disabled={resetLoading}
+                            onClick={handleRequestTempPassword}
+                        >
+                            {resetLoading ? 'Sending...' : 'Request a new one'}
+                        </Button>
+                    </div>
+                )}
+
                 {fieldError && (
                     <div className="alert alert-danger" role="alert">
                         {fieldError}
@@ -136,7 +167,7 @@ const ChangePassword = () => {
                                 name="oldPassword"
                                 value={form.oldPassword}
                                 onChange={handleChange}
-                                placeholder="Old Password"
+                                placeholder="Temporary Password"
                                 required
                                 autoComplete="current-password"
                                 isInvalid={!!fieldError && !form.oldPassword}

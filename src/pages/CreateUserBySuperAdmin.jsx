@@ -36,7 +36,7 @@ const CreateUserBySuperAdmin = () => {
             const res = await api.get('/my-created-users');
             setUsers(res.data);
         } catch (err) {
-            notifyError(err.response?.data?.message || 'Failed to fetch users');
+            notifyError(err.response?.data?.error?.message || 'Failed to fetch users');
         }
         setLoadingUsers(false);
     };
@@ -60,7 +60,7 @@ const CreateUserBySuperAdmin = () => {
             setForm({ name: '', email: '', role: 'user' });
             fetchUsers();
         } catch (err) {
-            notifyError(err.response?.data?.message || 'Failed to create user');
+            notifyError(err.response?.data?.error?.message || 'Failed to create user');
         }
         setCreating(false);
     };
@@ -88,7 +88,7 @@ const CreateUserBySuperAdmin = () => {
             setUserToDelete(null);
             fetchUsers(); // Refresh user list
         } catch (err) {
-            notifyError(err.response?.data?.message || 'Failed to delete user');
+            notifyError(err.response?.data?.error?.message || 'Failed to delete user');
         }
         setDeleting(false);
     };
@@ -109,7 +109,7 @@ const CreateUserBySuperAdmin = () => {
             notifySuccess('User role updated successfully');
             setShowRoleModal(false);
         } catch (err) {
-            notifyError(err.response?.data?.message || 'Failed to update user role');
+            notifyError(err.response?.data?.error?.message || 'Failed to update user role');
         }
     };
 

@@ -63,8 +63,8 @@ function ExpenseManager() {
                 } else {
                     setAccessLevel(null);
                 }
-            } catch {
-                notifyError('Failed to load expenses');
+            } catch (err) {
+                notifyError(err.response?.data?.error?.message || 'Failed to load expenses');
             } finally {
                 setLoading(false);
             }
@@ -106,8 +106,8 @@ function ExpenseManager() {
             await api.delete(`/expense/${expense._id}`);
             setExpenses(prev => prev.filter(e => e._id !== expense._id));
             notifySuccess('Expense deleted successfully!');
-        } catch {
-            notifyError('Failed to delete expense');
+        } catch (err) {
+            notifyError(err.response?.data?.error?.message || 'Failed to delete expense');
         } finally {
             setDeleteModal({ show: false, expense: null });
         }

@@ -61,7 +61,9 @@ export default function ShareSolutionModal({ show, onHide, solution, onDone, onS
                 );
             })
             .catch((err) => {
-                console.error('err')
+                const apiMessage = err?.response?.data?.error?.message;
+                const finalMessage = apiMessage || 'Failed to load available users';
+                notifyError(finalMessage);
                 setAllUsers([])
             });
 
@@ -121,9 +123,11 @@ export default function ShareSolutionModal({ show, onHide, solution, onDone, onS
             setSaving(false);
             onDone && onDone();
             onHide();
-        } catch {
+        } catch (err) {
+            const apiMessage = err?.response?.data?.error?.message;
+            const finalMessage = apiMessage || 'Failed to update sharing';
+            notifyError(finalMessage);
             setSaving(false);
-            notifyError('Failed to update sharing');
         }
     };
 

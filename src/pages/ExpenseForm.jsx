@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Form, Button, Row, Col, Alert, CloseButton } from 'react-bootstrap';
+import { Form, Button, Row, Col, CloseButton } from 'react-bootstrap';
 import api from '../api/http';
-import { useAlert } from '../utils/AlertUtil';  // Import your alert hook
+import { useAlert } from '../utils/AlertUtil';
 
 function ExpenseForm({ expense, solutionCardId, onSuccess, onCancel }) {
     const [name, setName] = useState('');
@@ -9,9 +9,8 @@ function ExpenseForm({ expense, solutionCardId, onSuccess, onCancel }) {
     const [amount, setAmount] = useState('');
     const [paymentMethod, setPaymentMethod] = useState('cash');
     const [paidAmount, setPaidAmount] = useState('');
-    const [upiScreenshots, setUpiScreenshots] = useState([]);  // New files selected
-    const [existingScreenshots, setExistingScreenshots] = useState([]); // For edit: existing screenshot URLs with public IDs
-    const [error, setError] = useState('');
+    const [upiScreenshots, setUpiScreenshots] = useState([]);
+    const [existingScreenshots, setExistingScreenshots] = useState([]);
     const [loading, setLoading] = useState(false);
 
     const { notifySuccess, notifyError } = useAlert();
@@ -21,11 +20,20 @@ function ExpenseForm({ expense, solutionCardId, onSuccess, onCancel }) {
             setName(expense.name || '');
             setCategory(expense.category || '');
             setAmount(String(expense.amount ?? ''));
-            setPaidAmount(String(expense.payments?.reduce((sum, p) => sum + (p.paidAmount || 0), 0) ?? ''));
-            setPaymentMethod(expense.payments?.length && expense.payments[0].paymentMethod ? expense.payments[0].paymentMethod : 'cash');
+            setPaidAmount(
+                String(
+                    expense.payments?.reduce((sum, p) => sum + (p.paidAmount || 0), 0) ?? ''
+                )
+            );
+            setPaymentMethod(
+                expense.payments?.length && expense.payments[0].paymentMethod
+                    ? expense.payments[0].paymentMethod
+                    : 'cash'
+            );
+
             let screenshots = [];
             if (expense.payments) {
-                expense.payments.forEach(p => {
+                expense.payments.forEach((p) => {
                     if (p.upiScreenshotUrls && p.upiScreenshotUrls.length) {
                         screenshots = screenshots.concat(p.upiScreenshotUrls);
                     }
@@ -46,29 +54,27 @@ function ExpenseForm({ expense, solutionCardId, onSuccess, onCancel }) {
         setPaidAmount('');
         setUpiScreenshots([]);
         setExistingScreenshots([]);
-        setError('');
     };
 
     const handleFileChange = (e) => {
         const filesArray = Array.from(e.target.files);
-        setUpiScreenshots(prev => [...prev, ...filesArray]);
+        setUpiScreenshots((prev) => [...prev, ...filesArray]);
     };
 
     const removeNewImage = (index) => {
-        setUpiScreenshots(prev => prev.filter((_, i) => i !== index));
+        setUpiScreenshots((prev) => prev.filter((_, i) => i !== index));
     };
 
     const removeExistingImage = (index) => {
-        setExistingScreenshots(prev => prev.filter((_, i) => i !== index));
+        setExistingScreenshots((prev) => prev.filter((_, i) => i !== index));
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setError('');
 
         if (paymentMethod === 'upi') {
             if (upiScreenshots.length === 0 && existingScreenshots.length === 0) {
-                setError('Please upload at least one UPI screenshot.');
+                notifyError('Please upload at least one UPI screenshot.');
                 return;
             }
         }
@@ -83,11 +89,13 @@ function ExpenseForm({ expense, solutionCardId, onSuccess, onCancel }) {
             formData.append('paidAmount', paidAmount);
             formData.append('solutionCard', solutionCardId);
 
-            const payments = [{
-                paidAmount: Number(paidAmount),
-                paymentMethod,
-                upiScreenshotUrls: existingScreenshots,
-            }];
+            const payments = [
+                {
+                    paidAmount: Number(paidAmount),
+                    paymentMethod,
+                    upiScreenshotUrls: existingScreenshots,
+                },
+            ];
             formData.append('payments', JSON.stringify(payments));
 
             if (expense) {
@@ -95,7 +103,9 @@ function ExpenseForm({ expense, solutionCardId, onSuccess, onCancel }) {
                 formData.append('existingScreenshots', JSON.stringify(existingScreenshots));
             }
 
-            upiScreenshots.forEach(file => formData.append('upiScreenshots', file));
+            upiScreenshots.forEach((file) =>
+                formData.append('upiScreenshots', file)
+            );
 
             let res;
             if (expense) {
@@ -112,8 +122,8 @@ function ExpenseForm({ expense, solutionCardId, onSuccess, onCancel }) {
             notifySuccess(expense ? 'Expense updated successfully!' : 'Expense added successfully!');
             if (onSuccess) onSuccess(res.data.expense);
         } catch (err) {
-            const message = err.response?.data?.message || err.message || 'Failed to save expense';
-            setError(message);
+            const message =
+                err.response?.data?.error?.message || 'Failed to save expense';
             notifyError(message);
         } finally {
             setLoading(false);
@@ -122,15 +132,13 @@ function ExpenseForm({ expense, solutionCardId, onSuccess, onCancel }) {
 
     return (
         <Form onSubmit={handleSubmit}>
-            {error && <Alert variant="danger">{error}</Alert>}
-
             <Row className="mb-3">
                 <Form.Group as={Col} controlId="expenseName">
                     <Form.Label>Expense Name</Form.Label>
                     <Form.Control
                         type="text"
                         value={name}
-                        onChange={e => setName(e.target.value)}
+                        onChange={(e) => setName(e.target.value)}
                         required
                     />
                 </Form.Group>
@@ -140,7 +148,7 @@ function ExpenseForm({ expense, solutionCardId, onSuccess, onCancel }) {
                     <Form.Control
                         type="text"
                         value={category}
-                        onChange={e => setCategory(e.target.value)}
+                        onChange={(e) => setCategory(e.target.value)}
                         required
                     />
                 </Form.Group>
@@ -154,7 +162,7 @@ function ExpenseForm({ expense, solutionCardId, onSuccess, onCancel }) {
                         min="0"
                         step="0.01"
                         value={amount}
-                        onChange={e => setAmount(e.target.value)}
+                        onChange={(e) => setAmount(e.target.value)}
                         required
                     />
                 </Form.Group>
@@ -166,7 +174,7 @@ function ExpenseForm({ expense, solutionCardId, onSuccess, onCancel }) {
                         min="0"
                         step="0.01"
                         value={paidAmount}
-                        onChange={e => setPaidAmount(e.target.value)}
+                        onChange={(e) => setPaidAmount(e.target.value)}
                         required
                     />
                 </Form.Group>
@@ -176,7 +184,7 @@ function ExpenseForm({ expense, solutionCardId, onSuccess, onCancel }) {
                 <Form.Label>Payment Method</Form.Label>
                 <Form.Select
                     value={paymentMethod}
-                    onChange={e => setPaymentMethod(e.target.value)}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
                     required
                 >
                     <option value="cash">Cash</option>
@@ -184,7 +192,7 @@ function ExpenseForm({ expense, solutionCardId, onSuccess, onCancel }) {
                 </Form.Select>
             </Form.Group>
 
-            {(paymentMethod === 'upi') && (
+            {paymentMethod === 'upi' && (
                 <>
                     <Form.Group className="mb-3" controlId="upiScreenshotsUpload">
                         <Form.Label>UPI Screenshots (you can add more)</Form.Label>
@@ -193,7 +201,10 @@ function ExpenseForm({ expense, solutionCardId, onSuccess, onCancel }) {
                             accept="image/*"
                             multiple
                             onChange={handleFileChange}
-                            required={upiScreenshots.length === 0 && existingScreenshots.length === 0}
+                            required={
+                                upiScreenshots.length === 0 &&
+                                existingScreenshots.length === 0
+                            }
                         />
                     </Form.Group>
 
@@ -202,14 +213,29 @@ function ExpenseForm({ expense, solutionCardId, onSuccess, onCancel }) {
                             <Form.Label>Existing Screenshots</Form.Label>
                             <div className="mb-3 d-flex flex-wrap gap-3">
                                 {existingScreenshots.map((url, idx) => (
-                                    <div key={idx} style={{ position: 'relative', display: 'inline-block' }}>
+                                    <div
+                                        key={idx}
+                                        style={{
+                                            position: 'relative',
+                                            display: 'inline-block',
+                                        }}
+                                    >
                                         <img
                                             src={url}
                                             alt={`Existing UPI Screenshot ${idx + 1}`}
-                                            style={{ width: '120px', height: '120px', objectFit: 'cover' }}
+                                            style={{
+                                                width: '120px',
+                                                height: '120px',
+                                                objectFit: 'cover',
+                                            }}
                                         />
                                         <CloseButton
-                                            style={{ position: 'absolute', top: 0, right: 0, zIndex: 1 }}
+                                            style={{
+                                                position: 'absolute',
+                                                top: 0,
+                                                right: 0,
+                                                zIndex: 1,
+                                            }}
                                             onClick={() => removeExistingImage(idx)}
                                             aria-label="Remove existing screenshot"
                                         />
@@ -224,14 +250,29 @@ function ExpenseForm({ expense, solutionCardId, onSuccess, onCancel }) {
                             <Form.Label>New Screenshots</Form.Label>
                             <div className="mb-3 d-flex flex-wrap gap-3">
                                 {upiScreenshots.map((file, idx) => (
-                                    <div key={idx} style={{ position: 'relative', display: 'inline-block' }}>
+                                    <div
+                                        key={idx}
+                                        style={{
+                                            position: 'relative',
+                                            display: 'inline-block',
+                                        }}
+                                    >
                                         <img
                                             src={URL.createObjectURL(file)}
                                             alt={`UPI Screenshot ${idx + 1}`}
-                                            style={{ width: '120px', height: '120px', objectFit: 'cover' }}
+                                            style={{
+                                                width: '120px',
+                                                height: '120px',
+                                                objectFit: 'cover',
+                                            }}
                                         />
                                         <CloseButton
-                                            style={{ position: 'absolute', top: 0, right: 0, zIndex: 1 }}
+                                            style={{
+                                                position: 'absolute',
+                                                top: 0,
+                                                right: 0,
+                                                zIndex: 1,
+                                            }}
                                             onClick={() => removeNewImage(idx)}
                                             aria-label="Remove new screenshot"
                                         />
@@ -244,11 +285,20 @@ function ExpenseForm({ expense, solutionCardId, onSuccess, onCancel }) {
             )}
 
             <Button type="submit" disabled={loading}>
-                {loading ? 'Saving...' : (expense ? 'Update Expense' : 'Add Expense')}
+                {loading
+                    ? 'Saving...'
+                    : expense
+                        ? 'Update Expense'
+                        : 'Add Expense'}
             </Button>
 
             {onCancel && (
-                <Button variant="secondary" onClick={onCancel} className="ms-2" disabled={loading}>
+                <Button
+                    variant="secondary"
+                    onClick={onCancel}
+                    className="ms-2"
+                    disabled={loading}
+                >
                     Cancel
                 </Button>
             )}
