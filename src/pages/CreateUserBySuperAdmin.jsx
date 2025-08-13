@@ -8,7 +8,7 @@ import { useAlert } from '../utils/AlertUtil';
 import TableUtil from '../utils/TableUtil';
 import { RiUserSettingsLine, RiDeleteBin6Line } from 'react-icons/ri';
 
-const roles = ['user', 'admin', 'super_admin'];
+const roles = ['user', 'admin'];
 
 const CreateUserBySuperAdmin = () => {
     const [users, setUsers] = useState([]);
