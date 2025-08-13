@@ -63,8 +63,15 @@ export default function Solution() {
 
     const handleDelete = async (solution) => {
         if (window.confirm(`Delete "${solution.name}"?`)) {
-            await api.delete(`/solution/${solution._id}`);
-            setSolutions((prev) => prev.filter((s) => s._id !== solution._id));
+            try {
+                await api.delete(`/solution/${solution._id}`);
+                setSolutions((prev) => prev.filter((s) => s._id !== solution._id));
+                notifySuccess(`Solution "${solution.name}" deleted successfully`);
+            } catch (err) {
+                const apiMessage = err?.response?.data?.error?.message;
+                const finalMessage = apiMessage || `Failed to delete "${solution.name}"`;
+                notifyError(finalMessage);
+            }
         }
     };
 
