@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card, Button } from 'react-bootstrap';
-import { FaEdit, FaTrashAlt, FaUserPlus } from 'react-icons/fa';
+import { FaEdit, FaTrashAlt } from 'react-icons/fa';
+import { GoShareAndroid } from "react-icons/go";
 
 export default function SolutionCard({ solution, onEdit, onDelete, onShare, theme = 'light' }) {
     const cardClass = theme === 'dark' ? 'dark' : 'light';
@@ -20,7 +21,7 @@ export default function SolutionCard({ solution, onEdit, onDelete, onShare, them
                     title="Share"
                     className="share-btn"
                 >
-                    <FaUserPlus />
+                    <GoShareAndroid />
                 </Button>
             </Card.Header>
 
