@@ -4,8 +4,8 @@ import { useAlert } from '../utils/AlertUtil';
 const { notifySuccess, notifyError } = useAlert
 
 const api = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || 'https://expense-tracker-api-44nm.onrender.com/api',
-    // baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
+    // baseURL: import.meta.env.VITE_API_URL || 'https://expense-tracker-api-44nm.onrender.com/api',
+    baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
     withCredentials: true,
 });
 

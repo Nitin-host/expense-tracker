@@ -20,8 +20,8 @@ const Dashboard = () => {
             try {
                 const res = await api.get(`/dashboard/${solutionCardId}`);
                 setData(res.data);
-            } catch {
-                setError('Failed to load dashboard data.');
+            } catch (err) {
+                setError(err.response?.data?.error?.message || 'Failed to load dashboard data.');
             } finally {
                 setLoading(false);
             }

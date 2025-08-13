@@ -29,9 +29,11 @@ export default function Solution() {
                 return;
             }
             setSolutions(res.data);
-        } catch {
-            notifyError('Failed to load solutions');
-            setError('Failed to load solutions');
+        } catch (err) {
+            const apiMessage = err?.response?.data?.error?.message;
+            const finalMessage = apiMessage || 'Failed to load solutions';
+            notifyError(finalMessage);
+            setError(finalMessage);
         } finally {
             setLoading(false);
         }

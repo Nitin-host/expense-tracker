@@ -22,7 +22,7 @@ function ForgotPasswordFlow() {
             notifySuccess('OTP sent to your email');
             setStep(2);
         } catch (err) {
-            notifyError(err.response?.data?.message || 'Failed to send OTP');
+            notifyError(err.response?.data?.error?.message || 'Failed to send OTP');
         }
         setLoading(false);
     };
@@ -34,7 +34,7 @@ function ForgotPasswordFlow() {
             notifySuccess('OTP verified. You can now reset your password.');
             setStep(3);
         } catch (err) {
-            notifyError(err.response?.data?.message || 'OTP verification failed');
+            notifyError(err.response?.data?.error?.message || 'OTP verification failed');
         }
         setLoading(false);
     };
@@ -50,7 +50,7 @@ function ForgotPasswordFlow() {
             notifySuccess('Password reset successful. Redirecting to login...');
             setTimeout(() => window.location.href = '/login', 2000);
         } catch (err) {
-            notifyError(err.response?.data?.message || 'Failed to reset password');
+            notifyError(err.response?.data?.error?.message || 'Failed to reset password');
         }
         setLoading(false);
     };

@@ -25,7 +25,8 @@ export default function SolutionModal({ show, onHide, onSubmit, initialData }) {
             await onSubmit({ name, year, description });
             onHide();
         } catch (err) {
-            setError(err.message || 'Failed to save.');
+            const apiMessage = err?.response?.data?.error?.message;
+            setError(apiMessage || 'Failed to save.');
         } finally {
             setLoading(false);
         }
