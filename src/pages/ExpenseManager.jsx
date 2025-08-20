@@ -70,7 +70,7 @@ function ExpenseManager() {
             }
         }
         if (solutionId) fetchExpenses();
-    }, [solutionId, notifyError]);
+    }, [solutionId]);
 
     const openAddForm = () => {
         setEditableExpense(null);

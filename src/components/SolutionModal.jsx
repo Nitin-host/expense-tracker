@@ -1,32 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Form, Button } from 'react-bootstrap';
+import { useAlert } from '../utils/AlertUtil';
 
 export default function SolutionModal({ show, onHide, onSubmit, initialData }) {
     const [name, setName] = useState('');
     const [year, setYear] = useState(new Date().getFullYear());
     const [description, setDescription] = useState('');
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
+    const { notifySuccess, notifyError } = useAlert();
 
     useEffect(() => {
         if (show) {
             setName(initialData?.name || '');
             setYear(initialData?.year || new Date().getFullYear());
             setDescription(initialData?.description || '');
-            setError('');
         }
     }, [show, initialData]);
 
     const handleSubmit = async e => {
         e.preventDefault();
         setLoading(true);
-        setError('');
         try {
             await onSubmit({ name, year, description });
+            notifySuccess(initialData ? 'Solution updated successfully' : 'Solution created successfully');
             onHide();
         } catch (err) {
             const apiMessage = err?.response?.data?.error?.message;
-            setError(apiMessage || 'Failed to save.');
+            notifyError(apiMessage || 'Failed to save solution');
         } finally {
             setLoading(false);
         }
@@ -39,7 +39,6 @@ export default function SolutionModal({ show, onHide, onSubmit, initialData }) {
                     <Modal.Title>{initialData ? 'Edit' : 'Create'} Solution</Modal.Title>
                 </Modal.Header>
                 <Modal.Body>
-                    {error && <div className="alert alert-danger">{error}</div>}
                     <Form.Group className="mb-3">
                         <Form.Label>Solution Name</Form.Label>
                         <Form.Control

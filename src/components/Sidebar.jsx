@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Nav } from 'react-bootstrap';
+import { Nav, Button, Modal } from 'react-bootstrap';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { mainMenu, solutionCardSubMenu } from '../menu';
@@ -19,6 +19,7 @@ const Sidebar = ({ expanded }) => {
     const user = useSelector((state) => state.auth.user);
     const userRole = user?.role || 'user';
     const [openCollapseIds, setOpenCollapseIds] = useState([]);
+    const [showLogoutModal, setShowLogoutModal] = useState(false);
 
     // Toggle open state for collapsible menu
     const toggleCollapse = (id) => {
@@ -55,6 +56,19 @@ const Sidebar = ({ expanded }) => {
         navigate('/login');
     };
 
+    const handleLogoutClick = () => {
+        setShowLogoutModal(true);
+    };
+
+    const confirmLogout = () => {
+        setShowLogoutModal(false);
+        handleLogout();
+    };
+
+    const cancelLogout = () => {
+        setShowLogoutModal(false);
+    };
+
     // Only leaf menu items (no children) get the .active class
     const isMenuItemActive = (item) => {
         const normalizePath = (str) =>
@@ -87,7 +101,7 @@ const Sidebar = ({ expanded }) => {
                     <Nav.Link
                         as="button"
                         key={item.id}
-                        onClick={handleLogout}
+                        onClick={handleLogoutClick}
                         className={`d-flex align-items-center nav-item${isItemActive ? ' active' : ''}`}
                         aria-current={isItemActive ? 'page' : undefined}
                     >
@@ -156,6 +170,23 @@ const Sidebar = ({ expanded }) => {
             aria-label="Main Sidebar Navigation"
         >
             <Nav className="flex-column">{renderMenuItems(menuToRender)}</Nav>
+            {/* 🔹 Logout Confirmation Modal */}
+            <Modal show={showLogoutModal} onHide={cancelLogout} centered>
+                <Modal.Header closeButton>
+                    <Modal.Title>Confirm Logout</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    Are you sure you want to log out?
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={cancelLogout}>
+                        Cancel
+                    </Button>
+                    <Button variant="danger" onClick={confirmLogout}>
+                        Logout
+                    </Button>
+                </Modal.Footer>
+            </Modal>
         </nav>
     );
 };

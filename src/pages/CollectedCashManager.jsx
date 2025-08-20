@@ -41,7 +41,7 @@ function CollectedCashManager() {
             }
         }
         if (solutionId) fetchCollectedCash();
-    }, [solutionId, notifyError]);
+    }, [solutionId]);
 
     const openAddForm = () => {
         setEditableCash(null);

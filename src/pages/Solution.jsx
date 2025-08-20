@@ -16,7 +16,7 @@ export default function Solution() {
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [editSolution, setEditSolution] = useState(null);
     const [shareSolution, setShareSolution] = useState(null);
-    const { notifyError } = useAlert();
+    const { notifySuccess, notifyError } = useAlert();
 
     const fetchSolutions = async () => {
         setLoading(true);
