@@ -51,11 +51,8 @@ const Dashboard = () => {
     } = data;
 
     // Pie chart data for Expenses vs Collected Cash
-    const pieLabels = ['Expenses', 'Collected Cash'];
-    const pieSeries = [
-        recentExpenses.reduce((sum, e) => sum + e.amount, 0),
-        recentCollectedCash.reduce((sum, c) => sum + c.amount, 0),
-    ];
+    const pieLabels = ['Total Expenses', 'Total Collected Cash'];
+    const pieSeries = [totalExpenses, totalCollectedCash];
 
     const pieOptions = {
         labels: pieLabels,
