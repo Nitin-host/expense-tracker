@@ -1,43 +1,43 @@
 import React, { useEffect, useState } from 'react';
-import { Modal, Button, Form, Row, Col } from 'react-bootstrap';
+import { Modal, Button, Form } from './ui';
 import Select from 'react-select';
+import { FaTimes } from 'react-icons/fa';
 import api from '../api/http';
-import { useAlert } from '../utils/AlertUtil';
+import { useAlert } from '../context/alertContext';
 
 const ROLE_OPTIONS = [
     { value: 'viewer', label: 'Viewer' },
     { value: 'editor', label: 'Editor' },
 ];
 
-// Avatar helper
 const getInitials = (name) =>
     name
         ? name
-            .split(' ')
-            .map((n) => n[0])
-            .join('')
-            .toUpperCase()
-        : '';
+              .split(' ')
+              .map((n) => n[0])
+              .join('')
+              .toUpperCase()
+              .slice(0, 2)
+        : '?';
 
-const Avatar = ({ name }) => (
-    <span
-        style={{
-            display: 'inline-block',
-            width: 32,
-            height: 32,
-            borderRadius: '50%',
-            background: '#e0e7ef',
-            color: '#222',
-            lineHeight: '32px',
-            textAlign: 'center',
-            fontWeight: 'bold',
-            marginRight: 10,
-            userSelect: 'none',
-        }}
-    >
-        {getInitials(name)}
-    </span>
-);
+function ShareAvatar({ name }) {
+    return <span className="share-user-avatar">{getInitials(name)}</span>;
+}
+
+function ShareUserRow({ name, email, children }) {
+    return (
+        <div className="share-user-row">
+            <div className="share-user-row__info">
+                <ShareAvatar name={name} />
+                <div className="share-user-row__text">
+                    <div className="share-user-row__name">{name}</div>
+                    <div className="share-user-row__email">{email}</div>
+                </div>
+            </div>
+            <div className="share-user-row__actions">{children}</div>
+        </div>
+    );
+}
 
 export default function ShareSolutionModal({ show, onHide, solution, onDone, onShare }) {
     const { notifySuccess, notifyError } = useAlert();
@@ -62,9 +62,8 @@ export default function ShareSolutionModal({ show, onHide, solution, onDone, onS
             })
             .catch((err) => {
                 const apiMessage = err?.response?.data?.error?.message;
-                const finalMessage = apiMessage || 'Failed to load available users';
-                notifyError(finalMessage);
-                setAllUsers([])
+                notifyError(apiMessage || 'Failed to load available users');
+                setAllUsers([]);
             });
 
         if (solution) {
@@ -72,7 +71,7 @@ export default function ShareSolutionModal({ show, onHide, solution, onDone, onS
                 user: solution.owner._id,
                 name: solution.owner.name,
                 email: solution.owner.email,
-                role: 'owner'
+                role: 'owner',
             };
 
             setSharedUsers([ownerEntry, ...(solution.sharedWith || [])]);
@@ -80,11 +79,11 @@ export default function ShareSolutionModal({ show, onHide, solution, onDone, onS
 
         setSelectedUsers([]);
         setNotify(false);
-    }, [show, solution]);
+    }, [show, solution, notifyError]);
 
     const onUserSelectChange = (list) => {
         setSelectedUsers(
-            list.map((opt) => ({
+            (list || []).map((opt) => ({
                 ...opt,
                 role: selectedUsers.find((u) => u.value === opt.value)?.role || 'viewer',
             }))
@@ -111,7 +110,7 @@ export default function ShareSolutionModal({ show, onHide, solution, onDone, onS
                 ...selectedUsers.map((u) => ({ user: u.value, role: u.role })),
                 ...sharedUsers
                     .filter((u) => u.role !== 'owner')
-                    .map((u) => ({ user: u.user, role: u.role }))
+                    .map((u) => ({ user: u.user, role: u.role })),
             ];
 
             await onShare(solution._id, {
@@ -120,34 +119,45 @@ export default function ShareSolutionModal({ show, onHide, solution, onDone, onS
             });
 
             notifySuccess('Sharing updated successfully!');
-            setSaving(false);
             onDone && onDone();
             onHide();
         } catch (err) {
             const apiMessage = err?.response?.data?.error?.message;
-            const finalMessage = apiMessage || 'Failed to update sharing';
-            notifyError(finalMessage);
+            notifyError(apiMessage || 'Failed to update sharing');
+        } finally {
             setSaving(false);
         }
     };
 
-    const formatOptionLabel = ({ label, email }) => (
-        <div className="d-flex align-items-center">
-            <Avatar name={label} />
-            <div>
-                <div className="fw-bold">{label}</div>
-                <small className="text-muted">{email}</small>
+    const formatOptionLabel = ({ label, email }, { context }) => {
+        if (context === 'value') {
+            return (
+                <span className="react-select-chip">
+                    <span className="react-select-chip__name">{label}</span>
+                    {email ? <span className="react-select-chip__email">{email}</span> : null}
+                </span>
+            );
+        }
+
+        return (
+            <div className="share-select-option">
+                <ShareAvatar name={label} />
+                <div>
+                    <div className="share-select-option__name">{label}</div>
+                    <div className="share-select-option__email">{email}</div>
+                </div>
             </div>
-        </div>
-    );
+        );
+    };
 
     return (
-        <Modal show={show} onHide={onHide} size="lg" backdrop="static" centered>
+        <Modal show={show} onHide={onHide} size="lg" backdrop="static" centered fullscreen="sm-down">
             <Modal.Header closeButton>
                 <Modal.Title>Share ({solution?.name})</Modal.Title>
             </Modal.Header>
             <Modal.Body>
                 <Form.Group className="mb-3">
+                    <Form.Label>Add people</Form.Label>
                     <Select
                         isMulti
                         value={selectedUsers}
@@ -160,22 +170,17 @@ export default function ShareSolutionModal({ show, onHide, solution, onDone, onS
                 </Form.Group>
 
                 {selectedUsers.length > 0 && (
-                    <>
-                        <strong>Selected Users ({selectedUsers.length})</strong>
-                        {selectedUsers.map((u) => (
-                            <Row key={u.value} className="align-items-center justify-content-between p-2 border-bottom">
-                                <Col xs="auto" className="d-flex align-items-center">
-                                    <Avatar name={u.label} />
-                                    <div>
-                                        <div>{u.label}</div>
-                                        <small className="text-muted">{u.email}</small>
-                                    </div>
-                                </Col>
-                                <Col xs="auto" className="d-flex align-items-center gap-2">
+                    <section className="share-user-list mb-3">
+                        <h4 className="share-user-list__title">
+                            Selected users ({selectedUsers.length})
+                        </h4>
+                        <div className="share-user-list__body">
+                            {selectedUsers.map((u) => (
+                                <ShareUserRow key={u.value} name={u.label} email={u.email}>
                                     <Form.Select
                                         size="sm"
                                         value={u.role}
-                                        style={{ width: 110 }}
+                                        aria-label={`Role for ${u.label}`}
                                         onChange={(e) => onRoleChange(u.value, e.target.value, true)}
                                     >
                                         {ROLE_OPTIONS.map((opt) => (
@@ -184,49 +189,47 @@ export default function ShareSolutionModal({ show, onHide, solution, onDone, onS
                                             </option>
                                         ))}
                                     </Form.Select>
-                                    <Button
-                                        variant="link"
-                                        size="sm"
-                                        className="ms-2 text-danger"
-                                        onClick={() => setSelectedUsers(selectedUsers.filter((su) => su.value !== u.value))}
+                                    <button
+                                        type="button"
+                                        className="share-user-row__remove"
+                                        onClick={() =>
+                                            setSelectedUsers(selectedUsers.filter((su) => su.value !== u.value))
+                                        }
+                                        aria-label={`Remove ${u.label}`}
                                     >
-                                        &times;
-                                    </Button>
-                                </Col>
-                            </Row>
-                        ))}
-                    </>
+                                        <FaTimes />
+                                    </button>
+                                </ShareUserRow>
+                            ))}
+                        </div>
+                    </section>
                 )}
 
-                <Form.Group className="my-3">
+                <Form.Group className="mb-3">
                     <Form.Check
                         type="checkbox"
-                        label="Notify Users"
+                        label="Notify users by email"
                         checked={notify}
                         onChange={(e) => setNotify(e.target.checked)}
                     />
                 </Form.Group>
 
                 {sharedUsers.length > 0 && (
-                    <>
-                        <strong>Shared Users ({sharedUsers.length})</strong>
-                        {sharedUsers.map((u) => (
-                            <Row key={u.user} className="align-items-center justify-content-between p-2 border-bottom">
-                                <Col xs="auto" className="d-flex align-items-center">
-                                    <Avatar name={u.name || 'User'} />
-                                    <div>
-                                        <div>{u.name}</div>
-                                        <small className="text-muted">{u.email}</small>
-                                    </div>
-                                </Col>
-                                <Col xs="auto" className="d-flex align-items-center gap-2">
-                                    <strong>{u.role.charAt(0).toUpperCase() + u.role.slice(1)}</strong>
-                                    {u.role !== 'owner' && (
+                    <section className="share-user-list">
+                        <h4 className="share-user-list__title">
+                            People with access ({sharedUsers.length})
+                        </h4>
+                        <div className="share-user-list__body">
+                            {sharedUsers.map((u) => (
+                                <ShareUserRow key={u.user} name={u.name || 'User'} email={u.email}>
+                                    {u.role === 'owner' ? (
+                                        <span className="share-role-badge share-role-badge--owner">Owner</span>
+                                    ) : (
                                         <>
                                             <Form.Select
                                                 size="sm"
                                                 value={u.role}
-                                                style={{ width: 110 }}
+                                                aria-label={`Role for ${u.name}`}
                                                 onChange={(e) => onRoleChange(u.user, e.target.value, false)}
                                             >
                                                 {ROLE_OPTIONS.map((opt) => (
@@ -235,21 +238,20 @@ export default function ShareSolutionModal({ show, onHide, solution, onDone, onS
                                                     </option>
                                                 ))}
                                             </Form.Select>
-                                            <Button
-                                                variant="link"
-                                                size="sm"
-                                                className="ms-2 text-danger"
+                                            <button
+                                                type="button"
+                                                className="share-user-row__remove"
                                                 onClick={() => onUnshare(u.user)}
+                                                aria-label={`Remove ${u.name}`}
                                             >
-                                                &times;
-                                            </Button>
+                                                <FaTimes />
+                                            </button>
                                         </>
                                     )}
-                                    {u.role === 'owner' && <span className="badge bg-secondary ms-2">Owner</span>}
-                                </Col>
-                            </Row>
-                        ))}
-                    </>
+                                </ShareUserRow>
+                            ))}
+                        </div>
+                    </section>
                 )}
             </Modal.Body>
             <Modal.Footer>

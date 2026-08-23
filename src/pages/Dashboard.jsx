@@ -1,9 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, lazy, Suspense } from 'react';
 import api from '../api/http';
-import { Card, Spinner, Alert, Row, Col, ListGroup } from 'react-bootstrap';
+import { Alert, Row, Col, Spinner } from '../components/ui';
 import { useParams } from 'react-router-dom';
-import Chart from 'react-apexcharts';
-import '../styles/Dashboard.scss';
+import { SkeletonDashboard } from '../components/Skeleton';
+import { formatDate } from '../utils/formatDate';
+
+const Chart = lazy(() => import('react-apexcharts'));
 
 const Dashboard = () => {
     const { id: solutionCardId } = useParams();
@@ -12,7 +14,6 @@ const Dashboard = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
-    // Fetch dashboard data when solutionCardId changes
     useEffect(() => {
         const fetchDashboard = async () => {
             setLoading(true);
@@ -29,14 +30,9 @@ const Dashboard = () => {
         if (solutionCardId) fetchDashboard();
     }, [solutionCardId]);
 
-    if (loading)
-        return (
-            <div className="text-center my-5">
-                <Spinner animation="border" variant="primary" role="status">
-                    <span className="visually-hidden">Loading...</span>
-                </Spinner>
-            </div>
-        );
+    if (loading) {
+        return <SkeletonDashboard />;
+    }
 
     if (error) return <Alert variant="danger">{error}</Alert>;
     if (!data) return null;
@@ -50,15 +46,15 @@ const Dashboard = () => {
         percentageSpent,
     } = data;
 
-    // Pie chart data for Expenses vs Collected Cash
     const pieLabels = ['Total Expenses', 'Total Collected Cash'];
     const pieSeries = [totalExpenses, totalCollectedCash];
 
     const pieOptions = {
         labels: pieLabels,
-        colors: ['#FF9800', '#189708f1'], // Orange and green
+        colors: ['#ea580c', '#0f766e'],
         legend: { position: 'bottom' },
         dataLabels: { enabled: true },
+        chart: { fontFamily: 'Outfit, system-ui, sans-serif' },
         tooltip: {
             y: {
                 formatter: (val) => `₹${val.toLocaleString()}`,
@@ -66,119 +62,111 @@ const Dashboard = () => {
         },
     };
 
-    // Determine remaining budget card color
-    const remainingColor = remainingBudget < 0 ? 'danger' : 'success';
+    const remainingTone = remainingBudget < 0 ? 'danger' : 'success';
 
     return (
-        <>
-            <h4>Solution Budget Dashboard</h4>
+        <div className="dashboard-page page-shell">
+            <div className="page-header">
+                <div>
+                    <h1 className="page-heading">Budget overview</h1>
+                    <p className="page-sub">Totals, mix, and recent activity for this solution.</p>
+                </div>
+            </div>
 
-            {/* Top Summary Cards */}
-            <Row className="mb-4">
-                {/* Total Collected Cash */}
-                <Col md={4} sm={12} className="mb-3">
-                    <Card className="dashboard-card shadow-sm border-success">
-                        <Card.Body>
-                            <Card.Title>Total Collected Cash (Budget)</Card.Title>
-                            <h3 className="text-success">
-                                ₹{totalCollectedCash.toLocaleString()}
-                            </h3>
-                        </Card.Body>
-                    </Card>
+            <Row className="mb-4 g-3">
+                <Col md={4} sm={12}>
+                    <div className="stat-tile">
+                        <div className="stat-label">Total Collected Cash</div>
+                        <div className="stat-value text-success">
+                            ₹{totalCollectedCash.toLocaleString()}
+                        </div>
+                    </div>
                 </Col>
-
-                {/* Total Expenses */}
-                <Col md={4} sm={12} className="mb-3">
-                    <Card className="shadow-sm border-warning">
-                        <Card.Body>
-                            <Card.Title>Total Expenses</Card.Title>
-                            <h3 className="text-warning">₹{totalExpenses.toLocaleString()}</h3>
-                        </Card.Body>
-                    </Card>
+                <Col md={4} sm={12}>
+                    <div className="stat-tile">
+                        <div className="stat-label">Total Expenses</div>
+                        <div className="stat-value text-warning">
+                            ₹{totalExpenses.toLocaleString()}
+                        </div>
+                    </div>
                 </Col>
-
-                {/* Remaining Budget */}
-                <Col md={4} sm={12} className="mb-3">
-                    <Card bg={remainingColor} text="white" className="shadow-sm">
-                        <Card.Body>
-                            <Card.Title>Remaining Budget</Card.Title>
-                            <Row>
-                                <Col>
-                                    <h3>₹{remainingBudget.toLocaleString()}</h3>
-                                </Col>
-                                <Col className="text-end mt-2">
-                                    <h6>{percentageSpent}% Spend</h6>
-                                </Col>
-                            </Row>
-                        </Card.Body>
-                    </Card>
+                <Col md={4} sm={12}>
+                    <div className={`stat-tile remaining-${remainingTone}`}>
+                        <div className="stat-label">Remaining Budget</div>
+                        <div className="d-flex justify-content-between align-items-end gap-2 flex-wrap">
+                            <div className="stat-value">₹{remainingBudget.toLocaleString()}</div>
+                            <div className="stat-sub">{percentageSpent}% spent</div>
+                        </div>
+                    </div>
                 </Col>
             </Row>
 
-            <Row>
-                {/* Pie Chart */}
-                <Col xs={12} lg={6} className="mb-4">
-                    <Card className="shadow-sm">
-                        <Card.Body>
-                            <Card.Title>Expense vs Collected Cash</Card.Title>
-                            <Chart options={pieOptions} series={pieSeries} type="pie" height={350} />
-                        </Card.Body>
-                    </Card>
+            <Row className="g-3">
+                <Col xs={12} lg={6}>
+                    <div className="page-surface h-100">
+                        <h5 className="mb-3">Expense vs Collected Cash</h5>
+                        <Suspense
+                            fallback={
+                                <div className="d-flex justify-content-center py-5">
+                                    <Spinner size="sm" />
+                                </div>
+                            }
+                        >
+                            <Chart options={pieOptions} series={pieSeries} type="pie" height={320} />
+                        </Suspense>
+                    </div>
                 </Col>
 
-                {/* Recent Lists */}
                 <Col xs={12} lg={6}>
-                    <Row className='mt-3'>
-                        {/* Recent Expenses */}
-                        <Col xs={12} md={6} className="mb-4">
-                            <Card className="shadow-sm">
-                                <Card.Body>
-                                    <Card.Title>Recent Expenses Added</Card.Title>
-                                    {recentExpenses.length === 0 ? (
-                                        <p>No recent expenses</p>
-                                    ) : (
-                                        <ListGroup>
-                                            {recentExpenses.map((expense) => (
-                                                <ListGroup.Item key={expense.id}>
-                                                    <span className="fw-bold">{expense.name}</span>
-                                                    <span className="float-end text-warning">
-                                                        ₹{expense.amount.toLocaleString()} – {new Date(expense.date).toLocaleDateString()}
-                                                    </span>
-                                                </ListGroup.Item>
-                                            ))}
-                                        </ListGroup>
-                                    )}
-                                </Card.Body>
-                            </Card>
+                    <Row className="g-3">
+                        <Col xs={12} md={6}>
+                            <div className="page-surface h-100">
+                                <h5 className="mb-2">Recent Expenses</h5>
+                                {recentExpenses.length === 0 ? (
+                                    <p className="mb-0 text-muted">No recent expenses</p>
+                                ) : (
+                                    recentExpenses.map((expense) => (
+                                        <div className="recent-item" key={expense.id || expense._id}>
+                                            <span className="fw-semibold">{expense.name}</span>
+                                            <div className="recent-meta">
+                                                <span className="text-warning">
+                                                    ₹{expense.amount.toLocaleString()}
+                                                </span>
+                                                <span>
+                                                    {formatDate(expense.date || expense.createdAt)}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
                         </Col>
-
-                        {/* Recent Collected Cash */}
-                        <Col xs={12} md={6} className="mb-4">
-                            <Card className="shadow-sm">
-                                <Card.Body>
-                                    <Card.Title>Recent Collected Cash Added</Card.Title>
-                                    {recentCollectedCash.length === 0 ? (
-                                        <p>No recent collected cash</p>
-                                    ) : (
-                                        <ListGroup>
-                                            {recentCollectedCash.map((cash) => (
-                                                <ListGroup.Item key={cash.id}>
-                                                    <span className="fw-bold">{cash.name}</span>
-                                                    <span className="float-end text-success">
-                                                        ₹{cash.amount.toLocaleString()} – {new Date(cash.date).toLocaleDateString()}
-                                                    </span>
-                                                </ListGroup.Item>
-                                            ))}
-                                        </ListGroup>
-                                    )}
-                                </Card.Body>
-                            </Card>
+                        <Col xs={12} md={6}>
+                            <div className="page-surface h-100">
+                                <h5 className="mb-2">Recent Collected Cash</h5>
+                                {recentCollectedCash.length === 0 ? (
+                                    <p className="mb-0 text-muted">No recent collected cash</p>
+                                ) : (
+                                    recentCollectedCash.map((cash) => (
+                                        <div className="recent-item" key={cash.id || cash._id}>
+                                            <span className="fw-semibold">{cash.name}</span>
+                                            <div className="recent-meta">
+                                                <span className="text-success">
+                                                    ₹{cash.amount.toLocaleString()}
+                                                </span>
+                                                <span>
+                                                    {formatDate(cash.date || cash.collectedDate)}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
                         </Col>
                     </Row>
                 </Col>
             </Row>
-
-        </>
+        </div>
     );
 };
 

@@ -40,6 +40,8 @@ export const ThemeProvider = ({ children }) => {
     // Apply theme and save to localStorage on change
     useEffect(() => {
         document.body.setAttribute('data-theme', theme);
+        document.body.classList.remove('light-theme', 'dark-theme');
+        document.body.classList.add(`${theme}-theme`);
         localStorage.setItem('theme', theme);
     }, [theme]);
 

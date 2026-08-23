@@ -1,52 +1,78 @@
-import React, { useContext } from "react";
-import { Container, Row, Col, Button } from "react-bootstrap";
-import { useSelector } from "react-redux";
-import { Link } from "react-router-dom";
-import { ThemeContext } from "../utils/ThemeContext";  // import your ThemeContext
-import '../styles/home.scss';
+import React, { useContext } from 'react';
+import { Container, Row, Col, Button } from '../components/ui';
+import { useSelector } from 'react-redux';
+import { Link } from 'react-router-dom';
+import { ThemeContext } from '../utils/ThemeContext';
 
-const svgSrc = "/svg/expense-tracker.svg";
+const svgSrc = '/svg/expense-tracker.svg';
 
 export default function Home() {
     const user = useSelector((state) => state.auth.user);
-    const { theme } = useContext(ThemeContext);  // get theme from context
+    const { theme } = useContext(ThemeContext);
+    const firstName = user?.name?.split(' ')[0];
+    const isDark = theme === 'dark';
 
     return (
-        <div className="home-hero">
+        <div className="page-shell relative z-1 flex items-center justify-center px-4 py-10 md:px-4 md:pb-12 md:pt-10 max-md:px-1 max-md:pb-8 max-md:pt-5">
             <Container>
                 <Row className="align-items-center g-4 flex-md-row flex-column-reverse">
-                    {/* Right: Carded Content */}
                     <Col xs={12} md={6}>
-                        <div className={`home-info-card ${theme === "dark" ? "dark" : ""}`}>
-                            <h1 className="home-title">
-                                {`Welcome${user && user.name ? `, ${user.name}` : ""} to Expense Tracker`}
+                        <div
+                            className={`mx-auto rounded-[1.35rem] border p-6 backdrop-blur-[10px] md:px-8 md:py-9 ${
+                                isDark
+                                    ? 'border-slate-400/15 bg-slate-900/70'
+                                    : 'border-slate-900/5 bg-white/90'
+                            }`}
+                        >
+                            <p
+                                className={`mb-2.5 mt-0 text-[0.78rem] font-semibold uppercase tracking-[0.08em] ${
+                                    isDark ? 'text-teal-300' : 'text-accent'
+                                }`}
+                            >
+                                Expense Tracker
+                            </p>
+                            <h1 className="mb-4 font-sans text-[clamp(1.7rem,4.2vw,2.85rem)] font-extrabold leading-[1.12] tracking-[-0.03em]">
+                                {firstName ? `Hi ${firstName},` : 'Welcome,'}
+                                <span className="d-block">track spending with clarity.</span>
                             </h1>
-                            <p className="home-lead">
-                                Effortlessly track expenses by creating custom <b>solution cards</b> – for festivals, trips, or anything you want.
-                                Categorize each cost, select payment mode, and enjoy beautiful dashboards that reveal your spending trends and empower smarter budgeting, all in one place.
+                            <p
+                                className={`mb-7 max-w-[34ch] text-[clamp(1rem,2vw,1.15rem)] font-normal leading-relaxed ${
+                                    isDark ? 'text-slate-300' : 'text-muted'
+                                }`}
+                            >
+                                Create solution cards for trips, events, or shared budgets — then
+                                log expenses and watch the dashboard stay in balance.
                             </p>
                             <Button
                                 as={Link}
                                 to="/solution"
                                 size="lg"
                                 variant="primary"
-                                className="home-get-started-btn"
-                                aria-label="Get Started with Expense Tracker"
+                                className="min-h-12 rounded-[14px] px-6 py-[0.9rem] text-[1.02rem] font-semibold max-md:w-full"
+                                aria-label="Open solutions"
                             >
-                                Get Started
+                                Open Solutions
                             </Button>
                         </div>
                     </Col>
-                    {/* Left: SVG Illustration, in a themed circle */}
                     <Col xs={12} md={6}>
-                        <div className={`home-svg-card ${theme === "dark" ? "dark" : ""}`}>
+                        <div
+                            className={`mx-auto flex min-h-[220px] items-center justify-center rounded-3xl border p-[1.1rem] md:min-h-[280px] md:p-6 ${
+                                isDark
+                                    ? 'border-slate-400/15 bg-[radial-gradient(circle_at_30%_20%,rgba(45,212,191,0.14),transparent_45%),rgba(15,23,42,0.55)]'
+                                    : 'border-slate-900/5 bg-[radial-gradient(circle_at_30%_20%,rgba(20,184,166,0.16),transparent_45%),rgba(255,255,255,0.55)]'
+                            }`}
+                        >
                             <img
                                 src={svgSrc}
-                                alt="Expense Tracker Illustration"
-                                className="home-svg"
+                                alt=""
+                                className="block max-h-[280px] max-w-[min(360px,88%)]"
                                 style={
-                                    theme === "dark"
-                                        ? { filter: "invert(0.97) hue-rotate(182deg) brightness(0.93)" }
+                                    isDark
+                                        ? {
+                                              filter:
+                                                  'invert(0.97) hue-rotate(182deg) brightness(0.93)',
+                                          }
                                         : undefined
                                 }
                             />

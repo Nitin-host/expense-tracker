@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { Form, Button, InputGroup, FormControl, Spinner } from 'react-bootstrap';
+import { Form, Button, InputGroup, FormControl, Spinner } from '../components/ui';
 import { FiEye, FiEyeOff } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import BackgroundWrapper from '../utils/BackgroundWrapper';
 import api from '../api/http';
-import { useAlert } from '../utils/AlertUtil';
+import { useAlert } from '../context/alertContext';
 
 const getQueryParam = (param) => {
     const params = new URLSearchParams(window.location.search);
@@ -120,11 +120,11 @@ const ChangePassword = () => {
 
     return (
         <BackgroundWrapper>
-            <div className="auth-card">
+            <div className="w-full max-w-[420px] animate-[et-fade-up_0.28s_ease_both] rounded-[20px] border border-slate-900/10 bg-white/95 px-[1.4rem] pb-6 pt-7 text-slate-900 backdrop-blur-[14px] dark:border-slate-400/15 dark:bg-slate-900/90 dark:text-slate-200">
                 <div className="text-center mb-2">
-                    <img src="/logo.svg" alt="Expense Tracker Logo" style={{ width: 52, marginBottom: 5 }} />
+                    <img src="/logo.svg" alt="Expense Tracker Logo" className="mx-auto mb-1.5 w-[52px]" />
                 </div>
-                <h5 className="mb-2 text-center" style={{ fontWeight: 500 }}>Change Password</h5>
+                <h5 className="mb-2 text-center font-medium">Change Password</h5>
 
                 {expired && (
                     <div className="alert alert-warning">
@@ -225,7 +225,7 @@ const ChangePassword = () => {
                     </Form.Group>
 
                     <Button variant="primary" type="submit" className="w-100" disabled={loading}>
-                        {loading ? <Spinner animation="border" size="sm" /> : 'Change Password'}
+                        {loading ? <Spinner size="sm" /> : 'Change Password'}
                     </Button>
                 </Form>
             </div>

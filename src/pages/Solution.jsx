@@ -1,17 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { Container, Row, Col, Button, Spinner } from 'react-bootstrap';
+import { Container, Button, Alert } from '../components/ui';
 import api from '../api/http';
-import { useAlert } from '../utils/AlertUtil';
-
+import { useAlert } from '../context/alertContext';
 import SolutionCard from '../components/SolutionCard';
 import SolutionModal from '../components/SolutionModal';
 import ShareSolutionModal from '../components/ShareSolutionModal';
+import { SkeletonSolutionsPage } from '../components/Skeleton';
 import noSolutions from '/svg/solution.svg';
-import '../styles/solution.scss'
 
 export default function Solution() {
     const [solutions, setSolutions] = useState([]);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [editSolution, setEditSolution] = useState(null);
@@ -22,13 +21,9 @@ export default function Solution() {
         setLoading(true);
         setError('');
         try {
-            const res = await api.get('/solution');
-            if (!Array.isArray(res.data)) {
-                setSolutions([]);
-                setError('Invalid data received');
-                return;
-            }
-            setSolutions(res.data);
+            const res = await api.get('/solution', { params: { page: 1, limit: 50 } });
+            const list = Array.isArray(res.data) ? res.data : res.data?.data || [];
+            setSolutions(list);
         } catch (err) {
             const apiMessage = err?.response?.data?.error?.message;
             const finalMessage = apiMessage || 'Failed to load solutions';
@@ -79,79 +74,77 @@ export default function Solution() {
         await api.post(`/solution/${solutionId}/share`, shareData);
     };
 
+    const subtitle =
+        solutions.length === 0
+            ? 'Create your first shared budget space.'
+            : `${solutions.length} active ${solutions.length === 1 ? 'solution' : 'solutions'}`;
+
+    if (loading) {
+        return <SkeletonSolutionsPage />;
+    }
+
     return (
-        <Container className="mt-4">
-            {loading && <div className="text-center my-5">
-                <Spinner animation="border" variant="primary" />
-            </div>}
-            {!loading &&
-                <>
-                    <Row className="mb-3">
-                        <Col><h3>Solutions ({solutions.length})</h3></Col>
-                        <Col className="text-end">
-                            <Button onClick={() => setShowCreateModal(true)}>Create</Button>
-                        </Col>
-                    </Row>
+        <Container className="page-shell max-w-[1200px] py-2">
+            <div className="page-header">
+                <div>
+                    <h1 className="page-heading">Solutions</h1>
+                    <p className="page-sub">{subtitle}</p>
+                </div>
+                <Button className="touch-btn" onClick={() => setShowCreateModal(true)}>
+                    Create
+                </Button>
+            </div>
 
-                    {error && <div className="alert alert-danger">{error}</div>}
+            {error ? <Alert variant="danger" className="mb-3">{error}</Alert> : null}
 
-                    {/* NOTE: each Col is a flex container (d-flex) so card can stretch */}
-                    <Row xs={1} sm={2} md={3} lg={4} className="g-4 align-items-stretch">
-                        {solutions.length === 0 && (
-                            <div
-                                className="d-flex flex-column align-items-center justify-content-center text-center w-100"
-                                style={{ minHeight: '60vh' }}
-                            >
-                                <img
-                                    src={noSolutions}
-                                    alt="No Solutions"
-                                    style={{ maxWidth: '350px', height: 'auto' }}
-                                />
-                                <p className="mt-3" style={{ color: 'var(--table-text)' }}>
-                                    You don’t have any solutions yet. Start by creating one.
-                                </p>
-                            </div>
-                        )}
-                        {solutions.map((solution) => (
-                            <Col key={solution._id} className="d-flex">
-                                <SolutionCard
-                                    solution={solution}
-                                    onEdit={setEditSolution}
-                                    onDelete={handleDelete}
-                                    onShare={setShareSolution}
-                                />
-                            </Col>
-                        ))}
-                    </Row>
-
-                    {showCreateModal && (
-                        <SolutionModal
-                            show={showCreateModal}
-                            onHide={() => setShowCreateModal(false)}
-                            onSubmit={handleCreate}
+            {solutions.length === 0 ? (
+                <div className="empty-state page-surface">
+                    <img src={noSolutions} alt="" />
+                    <p>No solutions yet. Start with one for a trip, event, or shared budget.</p>
+                    <Button className="touch-btn" onClick={() => setShowCreateModal(true)}>
+                        Create solution
+                    </Button>
+                </div>
+            ) : (
+                <div className="solution-grid">
+                    {solutions.map((solution) => (
+                        <SolutionCard
+                            key={solution._id}
+                            solution={solution}
+                            onEdit={setEditSolution}
+                            onDelete={handleDelete}
+                            onShare={setShareSolution}
                         />
-                    )}
+                    ))}
+                </div>
+            )}
 
-                    {editSolution && (
-                        <SolutionModal
-                            show={Boolean(editSolution)}
-                            onHide={() => setEditSolution(null)}
-                            onSubmit={handleUpdate}
-                            initialData={editSolution}
-                        />
-                    )}
+            {showCreateModal ? (
+                <SolutionModal
+                    show={showCreateModal}
+                    onHide={() => setShowCreateModal(false)}
+                    onSubmit={handleCreate}
+                />
+            ) : null}
 
-                    {shareSolution && (
-                        <ShareSolutionModal
-                            show={Boolean(shareSolution)}
-                            onHide={() => setShareSolution(null)}
-                            solution={shareSolution}
-                            onDone={fetchSolutions}
-                            onShare={handleShare}
-                        />
-                    )}
-                </>
-            }
+            {editSolution ? (
+                <SolutionModal
+                    show
+                    onHide={() => setEditSolution(null)}
+                    onSubmit={handleUpdate}
+                    initialData={editSolution}
+                />
+            ) : null}
+
+            {shareSolution ? (
+                <ShareSolutionModal
+                    show
+                    onHide={() => setShareSolution(null)}
+                    solution={shareSolution}
+                    onDone={fetchSolutions}
+                    onShare={handleShare}
+                />
+            ) : null}
         </Container>
     );
 }

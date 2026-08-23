@@ -1,52 +1,48 @@
 import React from 'react';
-import { Card, Button } from 'react-bootstrap';
-import { FaEdit, FaTrashAlt } from 'react-icons/fa';
-import { GoShareAndroid } from "react-icons/go";
+import { Link } from 'react-router-dom';
+import { FaEdit, FaTrashAlt, FaArrowRight } from 'react-icons/fa';
+import { GoShareAndroid } from 'react-icons/go';
 
-export default function SolutionCard({ solution, onEdit, onDelete, onShare, theme = 'light' }) {
-    const cardClass = theme === 'dark' ? 'dark' : 'light';
-
-    // Use flex-fill so the card expands inside the d-flex column parent
+export default function SolutionCard({ solution, onEdit, onDelete, onShare }) {
     return (
-        <Card className={`solution-card ${cardClass} shadow-sm border-0 flex-fill`}>
-            {/* Header */}
-            <Card.Header className="card-header-bar d-flex justify-content-between align-items-start p-3">
-                <div>
-                    <Card.Title as="h5">{solution.name}</Card.Title>
-                    <div className="text-muted small">{solution.year}</div>
+        <article className="solution-card">
+            <div className="solution-card__accent" aria-hidden />
+
+            <header className="solution-card__header">
+                <div className="solution-card__title-wrap">
+                    <h3 className="solution-card__title">{solution.name}</h3>
+                    <span className="year-chip">{solution.year}</span>
                 </div>
-                <Button
-                    variant="link"
+                <button
+                    type="button"
+                    className="solution-card__share"
                     onClick={() => onShare(solution)}
                     title="Share"
-                    className="share-btn"
+                    aria-label={`Share ${solution.name}`}
                 >
                     <GoShareAndroid />
-                </Button>
-            </Card.Header>
+                </button>
+            </header>
 
-            {/* Body: this will flex-grow to push footer down */}
-            <Card.Body className="d-flex flex-column">
-                <div className="description">
-                    {solution.description || <em>No description</em>}
-                </div>
+            <p className="solution-card__desc">
+                {solution.description || 'No description yet.'}
+            </p>
 
-                <div className="d-flex mt-3 gap-2">
-                    <Button size="sm" variant="outline-primary" onClick={() => onEdit(solution)}>
-                        <FaEdit /> Edit
-                    </Button>
-                    <Button size="sm" variant="outline-danger" onClick={() => onDelete(solution)}>
-                        <FaTrashAlt /> Delete
-                    </Button>
-                </div>
-            </Card.Body>
+            <div className="solution-card__actions">
+                <button type="button" className="solution-card__btn solution-card__btn--edit" onClick={() => onEdit(solution)}>
+                    <FaEdit aria-hidden /> Edit
+                </button>
+                <button type="button" className="solution-card__btn solution-card__btn--delete" onClick={() => onDelete(solution)}>
+                    <FaTrashAlt aria-hidden /> Delete
+                </button>
+            </div>
 
-            {/* Footer: mt-auto ensures it sits at bottom */}
-            <Card.Footer className="card-footer-bar py-2 d-flex justify-content-between align-items-center mt-auto">
-                <a className="explore-link" href={`/solution/${solution._id}/dashboard`}>
-                    Explore &raquo;
-                </a>
-            </Card.Footer>
-        </Card>
+            <footer className="solution-card__footer">
+                <Link className="solution-card__explore" to={`/solution/${solution._id}/dashboard`}>
+                    Explore
+                    <FaArrowRight aria-hidden />
+                </Link>
+            </footer>
+        </article>
     );
 }

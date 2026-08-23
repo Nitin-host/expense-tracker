@@ -1,16 +1,28 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import TableUtil from '../utils/TableUtil';
-import { Button, Modal, Form, Spinner } from 'react-bootstrap';
-import { FaEdit, FaTrashAlt } from 'react-icons/fa';
+import { Button, Modal, Form } from '../components/ui';
+import { FaEdit, FaTrashAlt, FaDownload } from 'react-icons/fa';
+import { fetchAndExport } from '../utils/export';
 import api from '../api/http';
 import { useParams } from 'react-router-dom';
-import { useAlert } from '../utils/AlertUtil';
+import { useAlert } from '../context/alertContext';
+import { SkeletonTablePage } from '../components/Skeleton';
+import { sanitizeDecimalInput } from '../utils/numericInput';
 
 function CollectedCashManager() {
     const { id: solutionId } = useParams();
 
     const [collectedCashList, setCollectedCashList] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
+    const [page, setPage] = useState(1);
+    const [pagination, setPagination] = useState({
+        page: 1,
+        limit: 20,
+        totalPages: 1,
+        total: 0,
+        hasMore: false,
+    });
 
     const [showForm, setShowForm] = useState(false);
     const [editableCash, setEditableCash] = useState(null);
@@ -25,23 +37,66 @@ function CollectedCashManager() {
     const { notifySuccess, notifyError } = useAlert();
     const [accessLevel, setAccessLevel] = useState(null);
 
-    // Fetch collected cash entries and accessLevel for solution
-    useEffect(() => {
-        async function fetchCollectedCash() {
-            setLoading(true);
-            try {
-                const res = await api.get(`/collected-cash/solution/${solutionId}`);
-                setCollectedCashList(res.data.collectedCash || []);
-                setAccessLevel(res.data.accessLevel || null);
-            } catch (err) {
-                const apiMessage = err?.response?.data?.error?.message;
-                notifyError(apiMessage || 'Failed to load collected cash data');
-            } finally {
-                setLoading(false);
-            }
+    const fetchCollectedCash = useCallback(async (pageNum = 1, { append = false } = {}) => {
+        if (append) setLoadingMore(true);
+        else setLoading(true);
+        try {
+            const res = await api.get(`/collected-cash/solution/${solutionId}`, {
+                params: { page: pageNum, limit: 20 },
+            });
+            const list = res.data.collectedCash || res.data.data || [];
+            setCollectedCashList((prev) => {
+                if (!append) return list;
+                const merged = [...prev, ...list];
+                return merged.length > 200 ? merged.slice(merged.length - 200) : merged;
+            });
+            const nextPage = res.data.page || pageNum;
+            const totalPages = res.data.totalPages || 1;
+            setPagination({
+                page: nextPage,
+                limit: res.data.limit || 20,
+                totalPages,
+                total: res.data.total || list.length,
+                hasMore: Boolean(res.data.hasMore ?? nextPage < totalPages),
+            });
+            setPage(nextPage);
+            setAccessLevel(res.data.accessLevel || null);
+        } catch (err) {
+            const apiMessage = err?.response?.data?.error?.message;
+            notifyError(apiMessage || 'Failed to load collected cash data');
+        } finally {
+            setLoading(false);
+            setLoadingMore(false);
         }
-        if (solutionId) fetchCollectedCash();
     }, [solutionId]);
+
+    useEffect(() => {
+        if (solutionId) {
+            setPage(1);
+            fetchCollectedCash(1, { append: false });
+        }
+    }, [solutionId, fetchCollectedCash]);
+
+    useEffect(() => {
+        const mq = window.matchMedia('(max-width: 767.98px)');
+        const onChange = (e) => {
+            if (!e.matches && solutionId) {
+                fetchCollectedCash(1, { append: false });
+            }
+        };
+        mq.addEventListener('change', onChange);
+        return () => mq.removeEventListener('change', onChange);
+    }, [solutionId, fetchCollectedCash]);
+
+    const handleLoadMore = () => {
+        if (loadingMore || !pagination.hasMore) return;
+        fetchCollectedCash(page + 1, { append: true });
+    };
+
+    const handleDesktopPageChange = (pageNum) => {
+        setPage(pageNum);
+        fetchCollectedCash(pageNum, { append: false });
+    };
 
     const openAddForm = () => {
         setEditableCash(null);
@@ -66,7 +121,10 @@ function CollectedCashManager() {
 
     const handleFormChange = (e) => {
         const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+        setFormData((prev) => ({
+            ...prev,
+            [name]: name === 'amount' ? sanitizeDecimalInput(value) : value,
+        }));
     };
 
     const handleFormSubmit = async (e) => {
@@ -83,30 +141,22 @@ function CollectedCashManager() {
         }
 
         try {
-            let res;
             if (editableCash) {
-                res = await api.put(`/collected-cash/${editableCash._id}`, {
+                await api.put(`/collected-cash/${editableCash._id}`, {
                     name: formData.name.trim(),
                     amount: Number(formData.amount),
                 });
-                setCollectedCashList(prev => {
-                    const index = prev.findIndex(c => c._id === editableCash._id);
-                    if (index === -1) return prev;
-                    const updated = [...prev];
-                    updated[index] = res.data.collectedCash;
-                    return updated;
-                });
                 notifySuccess('Collected cash updated successfully!');
             } else {
-                res = await api.post('/collected-cash', {
+                await api.post('/collected-cash', {
                     solutionCardId: solutionId,
                     name: formData.name.trim(),
                     amount: Number(formData.amount),
                 });
-                setCollectedCashList(prev => [res.data.collectedCash, ...prev]);
                 notifySuccess('Collected cash added successfully!');
             }
             closeForm();
+            fetchCollectedCash(1, { append: false });
         } catch (err) {
             const apiMessage = err?.response?.data?.error?.message;
             notifyError(apiMessage || 'Failed to save collected cash.');
@@ -119,8 +169,8 @@ function CollectedCashManager() {
 
         try {
             await api.delete(`/collected-cash/${cash._id}`);
-            setCollectedCashList(prev => prev.filter(c => c._id !== cash._id));
             notifySuccess('Collected cash entry deleted successfully!');
+            fetchCollectedCash(1, { append: false });
         } catch (err) {
             const apiMessage = err?.response?.data?.error?.message;
             notifyError(apiMessage || 'Failed to delete collected cash entry.');
@@ -147,45 +197,64 @@ function CollectedCashManager() {
     ];
 
     const tableHeader = [
-        { label: 'Name', key: 'name' },
+        { label: 'Contributor', key: 'name' },
         {
             label: 'Amount',
             key: 'amount',
             dataFormat: 'currency',
+            mobileHighlight: true,
             render: (value) => `₹${Number(value).toFixed(2)}`,
         },
-        { label: 'Collected Date', key: 'collectedDate', dataFormat: 'date' },
-        { label: 'Updated Date', key: 'updatedDate', dataFormat: 'date' }
+        { label: 'Collected', key: 'collectedDate', dataFormat: 'date' },
+        { label: 'Updated', key: 'updatedDate', dataFormat: 'date', mobileHide: true },
     ];
 
-    if (loading) {
-        return (
-            <div className="text-center my-5">
-                <Spinner animation="border" variant="primary" role="status" />
-            </div>
-        );
+    if (loading && collectedCashList.length === 0) {
+        return <SkeletonTablePage />;
     }
 
     return (
-        <>
-            {(accessLevel === 'owner' || accessLevel === 'editor') && (
-                <Button variant="primary" className="mb-3" onClick={openAddForm}>
-                    Add Collected Cash
-                </Button>
-            )}
+        <div className="page-shell">
+            <div className="page-header">
+                <div>
+                    <h1 className="page-heading">Collected cash</h1>
+                    <p className="page-sub">Budget inflows for this solution.</p>
+                </div>
+                <div className="d-flex flex-wrap gap-2">
+                    {(accessLevel === 'owner' || accessLevel === 'editor') && (
+                        <Button variant="primary" className="touch-btn" onClick={openAddForm}>
+                            Add cash
+                        </Button>
+                    )}
+                    <Button
+                        variant="outline-primary"
+                        size="sm"
+                        onClick={() => fetchAndExport(api, solutionId, 'collected-cash', 'excel')}
+                    >
+                        <FaDownload className="me-1" /> Excel
+                    </Button>
+                </div>
+            </div>
 
             <TableUtil
-                tableName="Collected Cash"
+                tableName="All entries"
                 tableData={collectedCashList}
                 tableHeader={tableHeader}
                 tableActions={actions}
                 searchKeys={['name']}
                 accessLevel={accessLevel}
+                serverPagination={pagination}
+                onPageChange={handleDesktopPageChange}
+                hasMore={pagination.hasMore}
+                loadingMore={loadingMore}
+                onLoadMore={handleLoadMore}
             />
 
-            <Modal show={showForm} onHide={closeForm} centered>
+            <Modal show={showForm} onHide={closeForm} centered fullscreen="sm-down">
                 <Modal.Header closeButton>
-                    <Modal.Title>{editableCash ? 'Edit Collected Cash' : 'Add Collected Cash'}</Modal.Title>
+                    <Modal.Title>
+                        {editableCash ? 'Edit Collected Cash' : 'Add Collected Cash'}
+                    </Modal.Title>
                 </Modal.Header>
                 <Modal.Body>
                     <Form onSubmit={handleFormSubmit}>
@@ -196,27 +265,28 @@ function CollectedCashManager() {
                                 name="name"
                                 value={formData.name}
                                 onChange={handleFormChange}
-                                placeholder="Enter name"
+                                placeholder="e.g. Nitin, Family contribution"
                                 required
+                                autoComplete="off"
                             />
                         </Form.Group>
 
                         <Form.Group className="mb-3" controlId="collectedCashAmount">
                             <Form.Label>Amount</Form.Label>
                             <Form.Control
-                                type="number"
-                                step="0.01"
-                                min="0"
+                                type="text"
+                                inputMode="decimal"
                                 name="amount"
                                 value={formData.amount}
                                 onChange={handleFormChange}
-                                placeholder="Enter amount"
+                                placeholder="e.g. 5000"
                                 required
+                                autoComplete="off"
                             />
                         </Form.Group>
 
-                        <div className="d-flex justify-content-end">
-                            <Button variant="secondary" onClick={closeForm} className="me-2">
+                        <div className="d-flex justify-content-end gap-2">
+                            <Button variant="secondary" onClick={closeForm}>
                                 Cancel
                             </Button>
                             <Button type="submit" variant="primary">
@@ -240,7 +310,10 @@ function CollectedCashManager() {
                     <strong>{deleteModal.collectedCash?.name}</strong>?
                 </Modal.Body>
                 <Modal.Footer>
-                    <Button variant="secondary" onClick={() => setDeleteModal({ show: false, collectedCash: null })}>
+                    <Button
+                        variant="secondary"
+                        onClick={() => setDeleteModal({ show: false, collectedCash: null })}
+                    >
                         Cancel
                     </Button>
                     <Button variant="danger" onClick={handleDelete}>
@@ -248,7 +321,7 @@ function CollectedCashManager() {
                     </Button>
                 </Modal.Footer>
             </Modal>
-        </>
+        </div>
     );
 }
 

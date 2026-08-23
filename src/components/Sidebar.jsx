@@ -1,192 +1,79 @@
-import React, { useState } from 'react';
-import { Nav, Button, Modal } from 'react-bootstrap';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useSelector, useDispatch } from 'react-redux';
+import React from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import { mainMenu, solutionCardSubMenu } from '../menu';
-import CustomTooltip from '../utils/CustomTooltip'; // Your custom tooltip
 import getIconComponent from '../utils/iconMapper';
 
-// Helper: extract solution card ID if current path matches /solution-cards/:id/...
 function getCurrentSolutionIdFromURL(path) {
     const match = path.match(/^\/solution\/([^/]+)/);
     return match ? match[1] : null;
 }
 
-const Sidebar = ({ expanded }) => {
+const Sidebar = ({ expanded, forceExpanded = false, onNavigate = () => {}, onRequestExpand = () => {} }) => {
     const location = useLocation();
-    const navigate = useNavigate();
-    const dispatch = useDispatch();
-    const user = useSelector((state) => state.auth.user);
-    const userRole = user?.role || 'user';
-    const [openCollapseIds, setOpenCollapseIds] = useState([]);
-    const [showLogoutModal, setShowLogoutModal] = useState(false);
+    const userRole = useSelector((state) => state.auth.user?.role || 'user');
 
-    // Toggle open state for collapsible menu
-    const toggleCollapse = (id) => {
-        setOpenCollapseIds((prev) =>
-            prev.includes(id) ? prev.filter((cId) => cId !== id) : [...prev, id]
-        );
-    };
-
-    // Filter menu items by role recursively
-    const filterByRole = (items) =>
-        items
-            .filter((item) => !item.roles || item.roles.includes(userRole))
-            .map((item) => {
-                if (item.children) {
-                    return { ...item, children: filterByRole(item.children) };
-                }
-                return item;
-            });
-
+    const showLabels = expanded || forceExpanded;
     const solutionId = getCurrentSolutionIdFromURL(location.pathname);
 
-    // Determine which menu to render:
+    const filterByRole = (items) =>
+        items.filter((item) => !item.roles || item.roles.includes(userRole));
+
     const menuToRender = solutionId
         ? filterByRole(
-            solutionCardSubMenu.map((item) => ({
-                ...item,
-                url: item.url.replace(':id', solutionId),
-            }))
-        )
+              solutionCardSubMenu.map((item) => ({
+                  ...item,
+                  url: item.url.replace(':id', solutionId),
+              }))
+          )
         : filterByRole(mainMenu);
 
-    const handleLogout = () => {
-        dispatch({ type: 'auth/logout' });
-        navigate('/login');
-    };
+    const normalizePath = (str) => (str.endsWith('/') ? str.slice(0, -1) : str);
 
-    const handleLogoutClick = () => {
-        setShowLogoutModal(true);
-    };
-
-    const confirmLogout = () => {
-        setShowLogoutModal(false);
-        handleLogout();
-    };
-
-    const cancelLogout = () => {
-        setShowLogoutModal(false);
-    };
-
-    // Only leaf menu items (no children) get the .active class
     const isMenuItemActive = (item) => {
-        const normalizePath = (str) =>
-            str.endsWith('/') ? str.slice(0, -1) : str;
-        if (!item.children || item.children.length === 0) {
-            // Exact match for leaves only
-            const itemUrl =
-                item.url?.replace(/:\w+/g, '') || '';
-            return normalizePath(location.pathname) === normalizePath(itemUrl);
-        }
-        return false;
+        if (!item.url) return false;
+        return normalizePath(location.pathname) === normalizePath(item.url);
     };
 
-    // Parent open/collapse: expanded if any child is active
-    const isAnyChildActive = (children) =>
-        children?.some(
-            (child) =>
-                isMenuItemActive(child) ||
-                (child.children && isAnyChildActive(child.children))
-        );
-
-    // Render menu items recursively
-    const renderMenuItems = (items) =>
-        items.map((item) => {
-            const IconComponent = getIconComponent(item.icon);
-            const isItemActive = isMenuItemActive(item);
-
-            if (item.action === true && item.id === 'logout') {
-                return (
-                    <Nav.Link
-                        as="button"
-                        key={item.id}
-                        onClick={handleLogoutClick}
-                        className={`d-flex align-items-center nav-item${isItemActive ? ' active' : ''}`}
-                        aria-current={isItemActive ? 'page' : undefined}
-                    >
-                        <IconComponent className="nav-icon" />
-                        {expanded && <span className="nav-text">{item.title}</span>}
-                    </Nav.Link>
-                );
-            }
-
-            if (item.children && item.children.length > 0) {
-                // Parent expanded if any child active or user opened it
-                const isOpen =
-                    openCollapseIds.includes(item.id) ||
-                    isAnyChildActive(item.children);
-
-                return (
-                    <div key={item.id} className="nav-group">
-                        <Nav.Link
-                            onClick={() => toggleCollapse(item.id)}
-                            aria-expanded={isOpen}
-                            aria-controls={`${item.id}-submenu`}
-                            className={`d-flex align-items-center nav-item${isOpen ? ' expanded' : ''}`}
-                            role="button"
-                            tabIndex={0}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter' || e.key === ' ') toggleCollapse(item.id);
-                            }}
-                        // No .active class here!
-                        >
-                            <IconComponent className="nav-icon" />
-                            {expanded && <span className="nav-text">{item.title}</span>}
-                            <span className="ms-auto">
-                                {expanded ? (isOpen ? '▾' : '▸') : ''}
-                            </span>
-                        </Nav.Link>
-                        <Nav
-                            id={`${item.id}-submenu`}
-                            className={`flex-column ms-3 collapse-submenu${isOpen ? ' show' : ''}`}
-                            aria-hidden={!isOpen}
-                        >
-                            {renderMenuItems(item.children)}
-                        </Nav>
-                    </div>
-                );
-            }
-
-            // Only leaf nodes get the .active highlight
-            return (
-                <CustomTooltip key={item.id} content={item.title} position="right">
-                    <Nav.Link
-                        as={Link}
-                        to={item.url}
-                        className={`d-flex align-items-center nav-item${isItemActive ? ' active' : ''}`}
-                        aria-current={isItemActive ? 'page' : undefined}
-                    >
-                        <IconComponent className="nav-icon" />
-                        {expanded && <span className="nav-text">{item.title}</span>}
-                    </Nav.Link>
-                </CustomTooltip>
-            );
-        });
+    const sectionLabel = solutionId ? 'Solution' : 'Menu';
 
     return (
         <nav
-            className={`sidebar ${expanded ? 'expanded' : 'collapsed'}`}
+            className={`sidebar ${showLabels ? 'expanded' : 'collapsed'} ${
+                forceExpanded ? 'in-offcanvas' : ''
+            }`}
             aria-label="Main Sidebar Navigation"
         >
-            <Nav className="flex-column">{renderMenuItems(menuToRender)}</Nav>
-            {/* 🔹 Logout Confirmation Modal */}
-            <Modal show={showLogoutModal} onHide={cancelLogout} centered>
-                <Modal.Header closeButton>
-                    <Modal.Title>Confirm Logout</Modal.Title>
-                </Modal.Header>
-                <Modal.Body>
-                    Are you sure you want to log out?
-                </Modal.Body>
-                <Modal.Footer>
-                    <Button variant="secondary" onClick={cancelLogout}>
-                        Cancel
-                    </Button>
-                    <Button variant="danger" onClick={confirmLogout}>
-                        Logout
-                    </Button>
-                </Modal.Footer>
-            </Modal>
+            <div className="sidebar__inner">
+                {showLabels && <p className="sidebar__section">{sectionLabel}</p>}
+
+                <div className="sidebar__nav">
+                    {menuToRender.map((item) => {
+                        const IconComponent = getIconComponent(item.icon);
+                        const isItemActive = isMenuItemActive(item);
+
+                        return (
+                            <Link
+                                key={item.id}
+                                to={item.url}
+                                onClick={() => {
+                                    if (!showLabels) onRequestExpand();
+                                    onNavigate();
+                                }}
+                                className={`sidebar__item${isItemActive ? ' is-active' : ''}`}
+                                aria-current={isItemActive ? 'page' : undefined}
+                                aria-label={item.title}
+                                title={!showLabels ? item.title : undefined}
+                            >
+                                <span className="sidebar__icon-wrap">
+                                    <IconComponent aria-hidden />
+                                </span>
+                                {showLabels && <span className="sidebar__label">{item.title}</span>}
+                            </Link>
+                        );
+                    })}
+                </div>
+            </div>
         </nav>
     );
 };

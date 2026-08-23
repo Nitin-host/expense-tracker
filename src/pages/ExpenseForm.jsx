@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { Form, Button, Row, Col, CloseButton } from 'react-bootstrap';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Form, Button, Row, Col, CloseButton } from '../components/ui';
 import api from '../api/http';
-import { useAlert } from '../utils/AlertUtil';
+import { useAlert } from '../context/alertContext';
+import { sanitizeDecimalInput } from '../utils/numericInput';
 
 function ExpenseForm({ expense, solutionCardId, onSuccess, onCancel }) {
     const [name, setName] = useState('');
@@ -14,6 +15,17 @@ function ExpenseForm({ expense, solutionCardId, onSuccess, onCancel }) {
     const [loading, setLoading] = useState(false);
 
     const { notifySuccess, notifyError } = useAlert();
+
+    const previewUrls = useMemo(
+        () => upiScreenshots.map((file) => URL.createObjectURL(file)),
+        [upiScreenshots]
+    );
+
+    useEffect(() => {
+        return () => {
+            previewUrls.forEach((url) => URL.revokeObjectURL(url));
+        };
+    }, [previewUrls]);
 
     useEffect(() => {
         if (expense) {
@@ -57,8 +69,9 @@ function ExpenseForm({ expense, solutionCardId, onSuccess, onCancel }) {
     };
 
     const handleFileChange = (e) => {
-        const filesArray = Array.from(e.target.files);
+        const filesArray = Array.from(e.target.files || []);
         setUpiScreenshots((prev) => [...prev, ...filesArray]);
+        e.target.value = '';
     };
 
     const removeNewImage = (index) => {
@@ -131,58 +144,69 @@ function ExpenseForm({ expense, solutionCardId, onSuccess, onCancel }) {
     };
 
     return (
-        <Form onSubmit={handleSubmit}>
-            <Row className="mb-3">
-                <Form.Group as={Col} controlId="expenseName">
-                    <Form.Label>Expense Name</Form.Label>
+        <Form onSubmit={handleSubmit} className="et-expense-form">
+            <Row className="g-3">
+                <Form.Group as={Col} xs={12} md={6} controlId="expenseName">
+                    <Form.Label htmlFor="expenseName">Expense Name</Form.Label>
                     <Form.Control
+                        id="expenseName"
                         type="text"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
+                        placeholder="e.g. Hotel booking, Groceries"
                         required
+                        autoComplete="off"
                     />
                 </Form.Group>
 
-                <Form.Group as={Col} controlId="expenseCategory">
-                    <Form.Label>Category</Form.Label>
+                <Form.Group as={Col} xs={12} md={6} controlId="expenseCategory">
+                    <Form.Label htmlFor="expenseCategory">Category</Form.Label>
                     <Form.Control
+                        id="expenseCategory"
                         type="text"
                         value={category}
                         onChange={(e) => setCategory(e.target.value)}
+                        placeholder="e.g. Food, Travel, Supplies"
                         required
+                        autoComplete="off"
                     />
                 </Form.Group>
             </Row>
 
-            <Row className="mb-3">
-                <Form.Group as={Col} controlId="expenseAmount">
-                    <Form.Label>Amount</Form.Label>
+            <Row className="g-3">
+                <Form.Group as={Col} xs={12} md={6} controlId="expenseAmount">
+                    <Form.Label htmlFor="expenseAmount">Amount</Form.Label>
                     <Form.Control
-                        type="number"
-                        min="0"
-                        step="0.01"
+                        id="expenseAmount"
+                        type="text"
+                        inputMode="decimal"
                         value={amount}
-                        onChange={(e) => setAmount(e.target.value)}
+                        onChange={(e) => setAmount(sanitizeDecimalInput(e.target.value))}
+                        placeholder="Enter total amount"
                         required
+                        autoComplete="off"
                     />
                 </Form.Group>
 
-                <Form.Group as={Col} controlId="paidAmount">
-                    <Form.Label>Paid Amount</Form.Label>
+                <Form.Group as={Col} xs={12} md={6} controlId="paidAmount">
+                    <Form.Label htmlFor="paidAmount">Paid Amount</Form.Label>
                     <Form.Control
-                        type="number"
-                        min="0"
-                        step="0.01"
+                        id="paidAmount"
+                        type="text"
+                        inputMode="decimal"
                         value={paidAmount}
-                        onChange={(e) => setPaidAmount(e.target.value)}
+                        onChange={(e) => setPaidAmount(sanitizeDecimalInput(e.target.value))}
+                        placeholder="Enter amount paid now"
                         required
+                        autoComplete="off"
                     />
                 </Form.Group>
             </Row>
 
-            <Form.Group className="mb-3" controlId="paymentMethod">
-                <Form.Label>Payment Method</Form.Label>
+            <Form.Group controlId="paymentMethod">
+                <Form.Label htmlFor="paymentMethod">Payment Method</Form.Label>
                 <Form.Select
+                    id="paymentMethod"
                     value={paymentMethod}
                     onChange={(e) => setPaymentMethod(e.target.value)}
                     required
@@ -194,12 +218,16 @@ function ExpenseForm({ expense, solutionCardId, onSuccess, onCancel }) {
 
             {paymentMethod === 'upi' && (
                 <>
-                    <Form.Group className="mb-3" controlId="upiScreenshotsUpload">
-                        <Form.Label>UPI Screenshots (you can add more)</Form.Label>
+                    <Form.Group controlId="upiScreenshotsUpload">
+                        <Form.Label htmlFor="upiScreenshotsUpload">
+                            UPI Screenshots (you can add more)
+                        </Form.Label>
                         <Form.Control
+                            id="upiScreenshotsUpload"
                             type="file"
                             accept="image/*"
                             multiple
+                            title="Choose UPI screenshot images"
                             onChange={handleFileChange}
                             required={
                                 upiScreenshots.length === 0 &&
@@ -209,99 +237,68 @@ function ExpenseForm({ expense, solutionCardId, onSuccess, onCancel }) {
                     </Form.Group>
 
                     {!!existingScreenshots.length && (
-                        <>
+                        <div className="et-form-gallery">
                             <Form.Label>Existing Screenshots</Form.Label>
-                            <div className="mb-3 d-flex flex-wrap gap-3">
+                            <div className="et-form-gallery__grid">
                                 {existingScreenshots.map((url, idx) => (
-                                    <div
-                                        key={idx}
-                                        style={{
-                                            position: 'relative',
-                                            display: 'inline-block',
-                                        }}
-                                    >
+                                    <div key={idx} className="et-form-gallery__item">
                                         <img
                                             src={url}
                                             alt={`Existing UPI Screenshot ${idx + 1}`}
-                                            style={{
-                                                width: '120px',
-                                                height: '120px',
-                                                objectFit: 'cover',
-                                            }}
                                         />
                                         <CloseButton
-                                            style={{
-                                                position: 'absolute',
-                                                top: 0,
-                                                right: 0,
-                                                zIndex: 1,
-                                            }}
+                                            className="et-form-gallery__remove"
                                             onClick={() => removeExistingImage(idx)}
                                             aria-label="Remove existing screenshot"
                                         />
                                     </div>
                                 ))}
                             </div>
-                        </>
+                        </div>
                     )}
 
                     {!!upiScreenshots.length && (
-                        <>
+                        <div className="et-form-gallery">
                             <Form.Label>New Screenshots</Form.Label>
-                            <div className="mb-3 d-flex flex-wrap gap-3">
+                            <div className="et-form-gallery__grid">
                                 {upiScreenshots.map((file, idx) => (
                                     <div
-                                        key={idx}
-                                        style={{
-                                            position: 'relative',
-                                            display: 'inline-block',
-                                        }}
+                                        key={`${file.name}-${file.lastModified}-${idx}`}
+                                        className="et-form-gallery__item"
                                     >
                                         <img
-                                            src={URL.createObjectURL(file)}
+                                            src={previewUrls[idx]}
                                             alt={`UPI Screenshot ${idx + 1}`}
-                                            style={{
-                                                width: '120px',
-                                                height: '120px',
-                                                objectFit: 'cover',
-                                            }}
+                                            loading="lazy"
                                         />
                                         <CloseButton
-                                            style={{
-                                                position: 'absolute',
-                                                top: 0,
-                                                right: 0,
-                                                zIndex: 1,
-                                            }}
+                                            className="et-form-gallery__remove"
                                             onClick={() => removeNewImage(idx)}
                                             aria-label="Remove new screenshot"
                                         />
                                     </div>
                                 ))}
                             </div>
-                        </>
+                        </div>
                     )}
                 </>
             )}
 
-            <Button type="submit" disabled={loading}>
-                {loading
-                    ? 'Saving...'
-                    : expense
-                        ? 'Update Expense'
-                        : 'Add Expense'}
-            </Button>
-
-            {onCancel && (
-                <Button
-                    variant="secondary"
-                    onClick={onCancel}
-                    className="ms-2"
-                    disabled={loading}
-                >
-                    Cancel
+            <div className="et-form-actions">
+                <Button type="submit" disabled={loading}>
+                    {loading
+                        ? 'Saving...'
+                        : expense
+                          ? 'Update Expense'
+                          : 'Add Expense'}
                 </Button>
-            )}
+
+                {onCancel && (
+                    <Button variant="secondary" onClick={onCancel} disabled={loading}>
+                        Cancel
+                    </Button>
+                )}
+            </div>
         </Form>
     );
 }

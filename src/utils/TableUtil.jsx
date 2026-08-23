@@ -1,9 +1,189 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Table, InputGroup, FormControl, Button, Pagination, Card } from 'react-bootstrap';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { Table, InputGroup, FormControl, Pagination } from '../components/ui';
 import FilterPopover from './FilterPopover';
-import '../styles/TableUtil.scss';
+import { SkeletonTableCards } from '../components/Skeleton';
+import { formatDate } from './formatDate';
 
-const isMobile = () => typeof window !== 'undefined' && window.innerWidth < 768;
+const MOBILE_MQ = '(max-width: 767.98px)';
+const MOBILE_BATCH = 10;
+
+const BADGE_KEYS = new Set(['role', 'category', 'paymentStatus', 'status']);
+const HIGHLIGHT_KEYS = new Set(['amount', 'advancePaid', 'pendingAmount', 'total', 'balance']);
+
+function isEmptyCellValue(val) {
+    if (val === undefined || val === null || val === '') return true;
+    if (Array.isArray(val) && val.length === 0) return true;
+    return false;
+}
+
+function getFieldKey(key) {
+    return String(key || '').split('.').pop().toLowerCase();
+}
+
+function formatRoleLabel(role) {
+    if (!role) return '';
+    return String(role)
+        .replace(/_/g, ' ')
+        .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function getColumnAlign(colDef) {
+    if (colDef?.align) return colDef.align;
+    if (colDef?.dataFormat === 'currency') return 'right';
+    if (colDef?.dataFormat === 'date') return 'left';
+    return 'left';
+}
+
+function getColumnClass(colDef) {
+    const classes = [`et-table-cell--${getColumnAlign(colDef)}`];
+    if (colDef?.dataFormat === 'currency') classes.push('et-table-cell--currency');
+    if (colDef?.dataFormat === 'date') classes.push('et-table-cell--date');
+    return classes.join(' ');
+}
+
+function MobileCard({
+    row,
+    tableHeader,
+    tableActions,
+    getCardBorderColor,
+    renderCell,
+}) {
+    const accent =
+        typeof getCardBorderColor === 'function' ? getCardBorderColor(row) : '#0f766e';
+
+    const visibleActions = (tableActions || []).filter((action) => {
+        if (typeof action.isVisible === 'function') return action.isVisible(row);
+        return action.isVisible !== false;
+    });
+
+    const primary = tableHeader[0];
+    const rest = tableHeader.slice(1);
+
+    const badges = [];
+    const highlights = [];
+    const details = [];
+
+    rest.forEach((col) => {
+        if (col.mobileHide) return;
+        const fieldKey = getFieldKey(col.key);
+        const raw = renderCell(row, col.key, col.dataFormat, col);
+        if (isEmptyCellValue(raw) || raw === '-') return;
+
+        if (col.mobileBadge || BADGE_KEYS.has(fieldKey)) {
+            badges.push({ label: col.label, value: raw, key: col.key });
+            return;
+        }
+
+        if (
+            col.mobileHighlight ||
+            col.dataFormat === 'currency' ||
+            HIGHLIGHT_KEYS.has(fieldKey)
+        ) {
+            highlights.push({ label: col.label, value: raw, key: col.key, col });
+            return;
+        }
+
+        details.push({ label: col.label, value: raw, key: col.key });
+    });
+
+    const title = primary
+        ? renderCell(row, primary.key, primary.dataFormat, primary)
+        : 'Untitled';
+
+    return (
+        <article className="mobile-data-card" style={{ '--card-accent': accent }}>
+            <div className="mobile-data-card__accent" aria-hidden />
+
+            <div className="mobile-data-card__body">
+                <header className="mobile-data-card__header">
+                    <div className="mobile-data-card__title-wrap">
+                        <h3 className="mobile-data-card__title">{title}</h3>
+                        {badges.length > 0 && (
+                            <div className="mobile-data-card__badges">
+                                {badges.map(({ label, value, key }) => (
+                                    <span key={key} className="mobile-data-card__badge" title={label}>
+                                        {typeof value === 'string' && value.length < 24
+                                            ? formatRoleLabel(value)
+                                            : value}
+                                    </span>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </header>
+
+                {highlights.length > 0 && (
+                    <div
+                        className={`mobile-data-card__metrics ${
+                            highlights.length === 1 ? 'mobile-data-card__metrics--single' : ''
+                        }`}
+                    >
+                        {highlights.map(({ label, value, key }) => (
+                            <div key={key} className="mobile-data-card__metric">
+                                <span className="mobile-data-card__metric-label">{label}</span>
+                                <span className="mobile-data-card__metric-value">{value}</span>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {details.length > 0 && (
+                    <dl className="mobile-data-card__details">
+                        {details.map(({ label, value, key }) => (
+                            <div key={key} className="mobile-data-card__detail-row">
+                                <dt>{label}</dt>
+                                <dd>{value}</dd>
+                            </div>
+                        ))}
+                    </dl>
+                )}
+            </div>
+
+            {visibleActions.length > 0 && (
+                <footer className="mobile-data-card__actions">
+                    {visibleActions.map(({ btnTitle, iconComponent: Icon, btnAction, btnClass = '' }) => {
+                        const isDanger =
+                            btnClass.includes('danger') || /delete/i.test(btnTitle);
+
+                        return (
+                            <button
+                                key={btnTitle}
+                                type="button"
+                                className={`mobile-data-card__action${isDanger ? ' mobile-data-card__action--danger' : ''}`}
+                                onClick={() => btnAction(row)}
+                                aria-label={btnTitle}
+                            >
+                                {Icon && <Icon className="mobile-data-card__action-icon" aria-hidden />}
+                                <span>{btnTitle}</span>
+                            </button>
+                        );
+                    })}
+                </footer>
+            )}
+        </article>
+    );
+}
+
+function getPageWindow(current, total, windowSize = 5) {
+    if (total <= windowSize) {
+        return Array.from({ length: total }, (_, i) => i + 1);
+    }
+    const half = Math.floor(windowSize / 2);
+    let start = Math.max(1, current - half);
+    let end = Math.min(total, start + windowSize - 1);
+    start = Math.max(1, end - windowSize + 1);
+    const pages = [];
+    if (start > 1) {
+        pages.push(1);
+        if (start > 2) pages.push('…');
+    }
+    for (let i = start; i <= end; i += 1) pages.push(i);
+    if (end < total) {
+        if (end < total - 1) pages.push('…');
+        pages.push(total);
+    }
+    return pages;
+}
 
 function TableUtil({
     tableName = 'Data Table',
@@ -13,20 +193,43 @@ function TableUtil({
     searchKeys = [],
     filterKeys = [],
     filters = {},
-    setFilters = () => { },
+    setFilters = () => {},
     getCardBorderColor,
+    serverPagination = null,
+    onPageChange = null,
+    hasMore = false,
+    loadingMore = false,
+    onLoadMore = null,
+    searchText: controlledSearch = undefined,
+    setSearchText: setControlledSearch = undefined,
+    onServerFilterChange = null,
 }) {
-    const [searchText, setSearchText] = useState('');
+    const [internalSearch, setInternalSearch] = useState('');
+    const searchText = controlledSearch !== undefined ? controlledSearch : internalSearch;
+    const setSearchText = setControlledSearch || setInternalSearch;
     const [filterVals, setFilterVals] = useState(filters);
     const [sortConfig, setSortConfig] = useState({ index: 0, asc: true });
-    const [currentPage, setCurrentPage] = useState(1);
-    const [rowsPerPage, setRowsPerPage] = useState(10);
-    const [mobileView, setMobileView] = useState(isMobile());
+    const [currentPage, setCurrentPage] = useState(serverPagination?.page || 1);
+    const [rowsPerPage] = useState(serverPagination?.limit || 10);
+    const [mobileVisibleCount, setMobileVisibleCount] = useState(MOBILE_BATCH);
+    const [mobileView, setMobileView] = useState(
+        typeof window !== 'undefined' ? window.matchMedia(MOBILE_MQ).matches : false
+    );
     const [theme, setTheme] = useState(
         typeof document !== 'undefined'
             ? document.body.getAttribute('data-theme') || 'light'
             : 'light'
     );
+    const sentinelRef = useRef(null);
+    const loadingMoreRef = useRef(loadingMore);
+    const searchDebounceRef = useRef(null);
+    loadingMoreRef.current = loadingMore;
+
+    useEffect(() => {
+        return () => {
+            if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+        };
+    }, []);
 
     useEffect(() => {
         setFilterVals((prevFilters) => {
@@ -38,8 +241,17 @@ function TableUtil({
     }, [filters]);
 
     useEffect(() => {
-        const onResize = () => setMobileView(isMobile());
-        window.addEventListener('resize', onResize);
+        if (serverPagination?.page) setCurrentPage(serverPagination.page);
+    }, [serverPagination?.page]);
+
+    useEffect(() => {
+        setMobileVisibleCount(MOBILE_BATCH);
+    }, [tableData, searchText, filterVals, sortConfig]);
+
+    useEffect(() => {
+        const mq = window.matchMedia(MOBILE_MQ);
+        const onChange = (e) => setMobileView(e.matches);
+        mq.addEventListener('change', onChange);
 
         const themeObserver = new MutationObserver(() => {
             const currentTheme = document.body.getAttribute('data-theme') || 'light';
@@ -48,7 +260,7 @@ function TableUtil({
         themeObserver.observe(document.body, { attributes: true, attributeFilter: ['data-theme'] });
 
         return () => {
-            window.removeEventListener('resize', onResize);
+            mq.removeEventListener('change', onChange);
             themeObserver.disconnect();
         };
     }, []);
@@ -57,6 +269,8 @@ function TableUtil({
         path.split('.').reduce((o, k) => (o ? o[k] : undefined), obj);
 
     const filteredData = useMemo(() => {
+        if (serverPagination) return [...tableData];
+
         let filtered = [...tableData];
 
         if (searchText && searchKeys && searchKeys.length > 0) {
@@ -92,15 +306,58 @@ function TableUtil({
             });
         }
         return filtered;
-    }, [tableData, filterVals, searchText, sortConfig, tableHeader, searchKeys]);
+    }, [tableData, filterVals, searchText, sortConfig, tableHeader, searchKeys, filterKeys, serverPagination]);
 
-    const totalPages = Math.ceil(filteredData.length / rowsPerPage);
-    const pagedData = filteredData.slice(
-        (currentPage - 1) * rowsPerPage,
-        currentPage * rowsPerPage
-    );
+    const totalPages = serverPagination
+        ? serverPagination.totalPages || 1
+        : Math.max(1, Math.ceil(filteredData.length / rowsPerPage) || 1);
+
+    const desktopData = serverPagination
+        ? filteredData
+        : filteredData.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
+
+    const mobileClientHasMore = !serverPagination && mobileVisibleCount < filteredData.length;
+    const mobileData = mobileView
+        ? serverPagination
+            ? filteredData
+            : filteredData.slice(0, mobileVisibleCount)
+        : desktopData;
+
+    const displayData = mobileView ? mobileData : desktopData;
+
+    const canLoadMoreMobile = mobileView && (serverPagination ? hasMore : mobileClientHasMore);
+
+    const loadMoreMobile = useCallback(() => {
+        if (loadingMoreRef.current) return;
+        if (serverPagination) {
+            if (hasMore && typeof onLoadMore === 'function') onLoadMore();
+            return;
+        }
+        setMobileVisibleCount((prev) => Math.min(prev + MOBILE_BATCH, filteredData.length));
+    }, [serverPagination, hasMore, onLoadMore, filteredData.length]);
+
+    useEffect(() => {
+        if (!mobileView || !canLoadMoreMobile) return undefined;
+        const node = sentinelRef.current;
+        if (!node) return undefined;
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0]?.isIntersecting) loadMoreMobile();
+            },
+            { root: null, rootMargin: '120px', threshold: 0 }
+        );
+        observer.observe(node);
+        return () => observer.disconnect();
+    }, [mobileView, canLoadMoreMobile, loadMoreMobile, displayData.length]);
+
+    const goToPage = (page) => {
+        setCurrentPage(page);
+        if (typeof onPageChange === 'function') onPageChange(page);
+    };
 
     const handleSort = (idx) => {
+        if (serverPagination) return;
         setCurrentPage(1);
         setSortConfig((prev) =>
             prev.index === idx ? { index: idx, asc: !prev.asc } : { index: idx, asc: true }
@@ -122,20 +379,19 @@ function TableUtil({
         return current;
     }
 
-    const hasVisibleActions = React.useMemo(() => {
+    const hasVisibleActions = useMemo(() => {
         if (!tableActions || tableActions.length === 0) return false;
-        if (pagedData.length === 0) return false;
+        if (displayData.length === 0) return false;
 
-        return pagedData.some(row =>
-            tableActions.some(action => {
+        return displayData.some((row) =>
+            tableActions.some((action) => {
                 if (typeof action.isVisible === 'function') {
                     return action.isVisible(row);
                 }
-                return action.isVisible !== false; // if boolean and not false, assume visible
+                return action.isVisible !== false;
             })
         );
-    }, [tableActions, pagedData]);
-
+    }, [tableActions, displayData]);
 
     const renderCell = (row, key, format, colDef) => {
         const val = getValueByPath(row, key);
@@ -156,7 +412,7 @@ function TableUtil({
             case 'currency':
                 return `₹${Number(val).toFixed(2)}`;
             case 'date':
-                return new Date(val).toLocaleDateString();
+                return formatDate(val);
             case 'boolean':
                 return val ? 'Yes' : 'No';
             default:
@@ -164,69 +420,49 @@ function TableUtil({
         }
     };
 
-    const MobileCard = ({ row }) => {
-        const borderColor =
-            typeof getCardBorderColor === 'function' ? getCardBorderColor(row) : '#27ae60';
-        return (
-            <Card
-                className="mb-3"
-                style={{
-                    borderLeft: `6px solid ${borderColor}`,
-                    paddingLeft: '12px',
-                    backgroundColor:
-                        theme === 'dark' ? 'var(--table-bg)' : 'var(--table-bg)',
-                    color: 'var(--table-text)',
-                }}>
-                <Card.Body>
-                    {tableHeader.map(({ label, key, dataFormat }, idx) => (
-                        <div key={idx} className="d-flex justify-content-between mb-1 flex-wrap">
-                            <strong style={{ minWidth: 90 }}>{label}:</strong>{' '}
-                            <span style={{ wordBreak: 'break-word', flex: 1 }}>
-                                {renderCell(row, key, dataFormat)}
-                            </span>
-                        </div>
-                    ))}
-                    <div className="d-flex flex-wrap gap-2 mt-3">
-                        {tableActions.map(
-                            ({ btnTitle, btnClass, iconComponent: Icon, btnAction, isVisible }, idx) => {
-                                if (typeof isVisible === 'function' && !isVisible(row)) return null;
-                                return (
-                                    <Button
-                                        key={idx}
-                                        className={'table-action-btn' || btnClass}
-                                        size="sm"
-                                        onClick={() => btnAction(row)}
-                                        title={btnTitle}
-                                        variant={btnClass?.includes('outline') ? undefined : 'outline-primary'}
-                                    >
-                                        {Icon && <Icon style={{ marginRight: 6 }} />}
-                                    </Button>
-                                );
-                            }
-                        )}
-                    </div>
-                </Card.Body>
-            </Card>
-        );
-    };
+    const pageItems = getPageWindow(currentPage, totalPages);
+    const showDesktopPagination = !mobileView && totalPages > 1;
 
     return (
-        <div>
-
-            <div className="d-flex justify-content-between flex-wrap align-items-center p-3">
-                <h5>{tableName}</h5>
-                <div className="d-flex align-items-center">
+        <div className="table-util-wrap page-surface overflow-hidden">
+            <div className="table-util-toolbar">
+                <h5 className="mb-0 font-semibold tracking-[-0.02em]">{tableName}</h5>
+                <div className="table-util-toolbar__controls">
                     {filterKeys && filterKeys.length > 0 && (
-                        <FilterPopover filterKeys={filterKeys} filters={filterVals} setFilters={setFilterVals} />
+                        <FilterPopover
+                            filterKeys={filterKeys}
+                            filters={filterVals}
+                            setFilters={(next) => {
+                                const val = typeof next === 'function' ? next(filterVals) : next;
+                                setFilterVals(val);
+                                setFilters(val);
+                                if (serverPagination && onServerFilterChange) onServerFilterChange(val);
+                            }}
+                        />
                     )}
                     {searchKeys && searchKeys.length > 0 && (
-                        <InputGroup style={{ maxWidth: 300 }} className="mb-2 ms-2">
+                        <InputGroup className="mb-0 table-util-toolbar__search">
                             <FormControl
-                                placeholder="Search"
+                                placeholder="Search entries..."
                                 value={searchText}
+                                inputMode="search"
+                                enterKeyHint="search"
                                 onChange={(e) => {
-                                    setSearchText(e.target.value);
+                                    const value = e.target.value;
+                                    setSearchText(value);
                                     setCurrentPage(1);
+                                    if (serverPagination && onServerFilterChange) {
+                                        if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+                                        searchDebounceRef.current = setTimeout(() => {
+                                            onServerFilterChange(filterVals, value);
+                                        }, 350);
+                                    }
+                                }}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && serverPagination && onServerFilterChange) {
+                                        if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+                                        onServerFilterChange(filterVals, e.target.value);
+                                    }
                                 }}
                             />
                         </InputGroup>
@@ -234,63 +470,125 @@ function TableUtil({
                 </div>
             </div>
 
-            {/* Table or Mobile Card View */}
             {mobileView ? (
-                <div>
-                    {pagedData.length === 0 ? (
-                        <p className="text-center my-3">No data found</p>
+                <div className="mobile-data-card-list">
+                    {displayData.length === 0 && !loadingMore ? (
+                        <div className="mobile-data-card-empty">
+                            <p>No entries found</p>
+                            <span>Try adjusting search or filters</span>
+                        </div>
                     ) : (
-                        pagedData.map((row) => <MobileCard key={row._id || row.id} row={row} />)
+                        displayData.map((row) => (
+                            <MobileCard
+                                key={row._id || row.id || row.key}
+                                row={row}
+                                tableHeader={tableHeader}
+                                tableActions={tableActions}
+                                getCardBorderColor={getCardBorderColor}
+                                renderCell={renderCell}
+                            />
+                        ))
+                    )}
+
+                    {loadingMore && (
+                        <div className="mobile-data-card-list__loading">
+                            <SkeletonTableCards count={2} />
+                        </div>
+                    )}
+
+                    {canLoadMoreMobile && !loadingMore && (
+                        <div ref={sentinelRef} className="pointer-events-none h-px w-full" aria-hidden />
                     )}
                 </div>
             ) : (
-                <Table striped bordered hover responsive>
+                <Table striped hover responsive className="mb-0 et-data-table">
                     <thead>
                         <tr>
-                            {tableHeader.map(({ label }, idx) => (
+                            {tableHeader.map((colDef, idx) => (
                                 <th
                                     key={idx}
-                                    style={{ cursor: 'pointer', userSelect: 'none' }}
-                                    onClick={() => handleSort(idx)}>
-                                    {label} {sortConfig.index === idx ? (sortConfig.asc ? '▲' : '▼') : ''}
+                                    className={getColumnClass(colDef)}
+                                    style={{
+                                        cursor: serverPagination ? 'default' : 'pointer',
+                                        userSelect: 'none',
+                                    }}
+                                    onClick={() => handleSort(idx)}
+                                >
+                                    <span className="et-table-head-label">
+                                        {colDef.label}
+                                        {!serverPagination && sortConfig.index === idx && (
+                                            <span className="et-table-sort" aria-hidden>
+                                                {sortConfig.asc ? ' ▲' : ' ▼'}
+                                            </span>
+                                        )}
+                                    </span>
                                 </th>
                             ))}
-                            {hasVisibleActions && <th>Actions</th>}
+                            {hasVisibleActions && (
+                                <th className="et-table-cell--actions">Actions</th>
+                            )}
                         </tr>
                     </thead>
                     <tbody>
-                        {pagedData.length === 0 ? (
+                        {displayData.length === 0 ? (
                             <tr>
-                                <td colSpan={tableHeader.length + (tableActions && tableActions.length ? 1 : 0)}>
+                                <td
+                                    colSpan={tableHeader.length + (hasVisibleActions ? 1 : 0)}
+                                    className="et-table-empty"
+                                >
                                     No data found
                                 </td>
                             </tr>
                         ) : (
-                            pagedData.map((row) => (
+                            displayData.map((row) => (
                                 <tr key={row._id || row.id}>
                                     {tableHeader.map((colDef, idx) => (
-                                        <td key={idx}>{renderCell(row, colDef.key, colDef.dataFormat, colDef)}</td>
+                                        <td key={idx} className={getColumnClass(colDef)}>
+                                            {renderCell(row, colDef.key, colDef.dataFormat, colDef)}
+                                        </td>
                                     ))}
                                     {tableActions && tableActions.length > 0 && (
-                                        <td>
-                                            {tableActions.map(
-                                                ({ btnTitle, btnClass, iconComponent: Icon, btnAction, isVisible }, idx) => {
-                                                    if (typeof isVisible === 'function' && !isVisible(row)) return null;
-                                                    return (
-                                                        <Button
-                                                            key={idx}
-                                                            className={'table-action-btn' || btnClass}
-                                                            size="sm"
-                                                            onClick={() => btnAction(row)}
-                                                            title={btnTitle}
-                                                            variant={btnClass?.includes('outline') ? undefined : 'outline-primary'}
-                                                            style={{ marginRight: '6px', marginBottom: '4px' }}
-                                                        >
-                                                            {Icon && <Icon style={{ marginRight: 4 }} />}
-                                                        </Button>
-                                                    );
-                                                }
-                                            )}
+                                        <td className="et-table-cell--actions">
+                                            <div className="et-table-actions">
+                                                {tableActions.map(
+                                                    (
+                                                        {
+                                                            btnTitle,
+                                                            btnClass = '',
+                                                            iconComponent: Icon,
+                                                            btnAction,
+                                                            isVisible,
+                                                        },
+                                                        idx
+                                                    ) => {
+                                                        if (
+                                                            typeof isVisible === 'function' &&
+                                                            !isVisible(row)
+                                                        ) {
+                                                            return null;
+                                                        }
+
+                                                        const isDanger =
+                                                            btnClass.includes('danger') ||
+                                                            /delete/i.test(btnTitle);
+
+                                                        return (
+                                                            <button
+                                                                key={idx}
+                                                                type="button"
+                                                                className={`et-table-action-btn${
+                                                                    isDanger ? ' et-table-action-btn--danger' : ''
+                                                                }`}
+                                                                onClick={() => btnAction?.(row)}
+                                                                title={btnTitle}
+                                                                aria-label={btnTitle}
+                                                            >
+                                                                {Icon ? <Icon size={15} aria-hidden /> : null}
+                                                            </button>
+                                                        );
+                                                    }
+                                                )}
+                                            </div>
                                         </td>
                                     )}
                                 </tr>
@@ -300,28 +598,32 @@ function TableUtil({
                 </Table>
             )}
 
-            {/* Shared Pagination for both views */}
-            {totalPages > 1 && (
-                <Pagination className={`justify-content-center my-3 pagination-${theme}`}>
-                    <Pagination.First onClick={() => setCurrentPage(1)} disabled={currentPage === 1} />
+            {showDesktopPagination && (
+                <Pagination className={`justify-content-center my-3 pagination-${theme} flex-wrap`}>
+                    <Pagination.First onClick={() => goToPage(1)} disabled={currentPage === 1} />
                     <Pagination.Prev
-                        onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+                        onClick={() => goToPage(Math.max(currentPage - 1, 1))}
                         disabled={currentPage === 1}
                     />
-                    {[...Array(totalPages)].map((_, idx) => (
-                        <Pagination.Item
-                            key={idx}
-                            active={currentPage === idx + 1}
-                            onClick={() => setCurrentPage(idx + 1)}>
-                            {idx + 1}
-                        </Pagination.Item>
-                    ))}
+                    {pageItems.map((item, idx) =>
+                        item === '…' ? (
+                            <Pagination.Ellipsis key={`e-${idx}`} disabled />
+                        ) : (
+                            <Pagination.Item
+                                key={item}
+                                active={currentPage === item}
+                                onClick={() => goToPage(item)}
+                            >
+                                {item}
+                            </Pagination.Item>
+                        )
+                    )}
                     <Pagination.Next
-                        onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+                        onClick={() => goToPage(Math.min(currentPage + 1, totalPages))}
                         disabled={currentPage === totalPages}
                     />
                     <Pagination.Last
-                        onClick={() => setCurrentPage(totalPages)}
+                        onClick={() => goToPage(totalPages)}
                         disabled={currentPage === totalPages}
                     />
                 </Pagination>

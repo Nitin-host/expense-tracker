@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Form, Button } from 'react-bootstrap';
-import { useAlert } from '../utils/AlertUtil';
+import { Modal, Form, Button } from './ui';
+import { useAlert } from '../context/alertContext';
+import { sanitizeIntegerInput } from '../utils/numericInput';
 
 export default function SolutionModal({ show, onHide, onSubmit, initialData }) {
     const [name, setName] = useState('');
@@ -47,6 +48,7 @@ export default function SolutionModal({ show, onHide, onSubmit, initialData }) {
                             required
                             minLength={2}
                             maxLength={64}
+                            placeholder="e.g. Vinayaka trip, Office budget"
                             onChange={e => setName(e.target.value)}
                             autoFocus
                         />
@@ -54,12 +56,13 @@ export default function SolutionModal({ show, onHide, onSubmit, initialData }) {
                     <Form.Group className="mb-3">
                         <Form.Label>Year</Form.Label>
                         <Form.Control
-                            type="number"
+                            type="text"
+                            inputMode="numeric"
                             value={year}
                             required
-                            min={2000}
-                            max={2100}
-                            onChange={e => setYear(e.target.value)}
+                            maxLength={4}
+                            placeholder="e.g. 2026"
+                            onChange={(e) => setYear(sanitizeIntegerInput(e.target.value))}
                         />
                     </Form.Group>
                     <Form.Group>
@@ -69,6 +72,7 @@ export default function SolutionModal({ show, onHide, onSubmit, initialData }) {
                             rows={3}
                             maxLength={200}
                             value={description}
+                            placeholder="Short note about this solution (optional)"
                             onChange={e => setDescription(e.target.value)}
                         />
                     </Form.Group>

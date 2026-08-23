@@ -20,13 +20,6 @@ const mainMenu = [
         icon: 'FaUserPlus',
         roles: ['super_admin', 'admin'],
     },
-    {
-        id: 'logout',
-        title: 'Logout',
-        icon: 'FaSignOutAlt',
-        roles: ['user', 'admin', 'super_admin'],
-        action: true,
-    },
 ];
 
 const solutionCardSubMenu = [
@@ -49,6 +42,13 @@ const solutionCardSubMenu = [
         title: 'Expense Data',
         url: '/solution/:id/expense-data',
         icon: 'FaTable',
+        roles: ['user', 'admin', 'super_admin'],
+    },
+    {
+        id: 'reports',
+        title: 'Reports',
+        url: '/solution/:id/reports',
+        icon: 'FaChartBar',
         roles: ['user', 'admin', 'super_admin'],
     },
 ];

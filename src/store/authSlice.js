@@ -39,7 +39,11 @@ export const loginUser = createAsyncThunk(
             const res = await api.post('/login', { email, password });
             return res.data;
         } catch (err) {
-            return rejectWithValue(err.response?.data?.error?.message || 'Login failed');
+            return rejectWithValue(
+                err.response?.data?.error?.message ||
+                    err.response?.data?.message ||
+                    'Login failed'
+            );
         }
     }
 );
@@ -84,6 +88,18 @@ const authSlice = createSlice({
         },
         resetRegisterSuccess(state) {
             state.registerSuccess = false;
+        },
+        setTokens(state, action) {
+            const { token, refreshToken } = action.payload || {};
+            if (token) state.token = token;
+            if (refreshToken) state.refreshToken = refreshToken;
+            state.isAuthenticated = Boolean(token);
+            saveAuthToLocal({
+                user: state.user,
+                token: state.token,
+                refreshToken: state.refreshToken,
+                isAuthenticated: state.isAuthenticated,
+            });
         },
     },
     extraReducers: (builder) => {
@@ -135,6 +151,6 @@ const authSlice = createSlice({
     },
 });
 
-export const { logout, resetRegisterSuccess } = authSlice.actions;
+export const { logout, resetRegisterSuccess, setTokens } = authSlice.actions;
 
 export default authSlice.reducer;

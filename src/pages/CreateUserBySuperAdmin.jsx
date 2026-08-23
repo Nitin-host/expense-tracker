@@ -1,18 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import {
     Container, Row, Col, Button, Modal, Form,
-    Spinner
-} from 'react-bootstrap';
+} from '../components/ui';
 import api from '../api/http';  // your axios instance
-import { useAlert } from '../utils/AlertUtil';
+import { useAlert } from '../context/alertContext';
 import TableUtil from '../utils/TableUtil';
+import { SkeletonUsersPage } from '../components/Skeleton';
 import { RiUserSettingsLine, RiDeleteBin6Line } from 'react-icons/ri';
 
 const roles = ['user', 'admin'];
 
 const CreateUserBySuperAdmin = () => {
     const [users, setUsers] = useState([]);
-    const [loadingUsers, setLoadingUsers] = useState(false);
+    const [loadingUsers, setLoadingUsers] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [creating, setCreating] = useState(false);
 
@@ -33,8 +33,8 @@ const CreateUserBySuperAdmin = () => {
     const fetchUsers = async () => {
         setLoadingUsers(true);
         try {
-            const res = await api.get('/my-created-users');
-            setUsers(res.data);
+            const res = await api.get('/my-created-users?limit=100');
+            setUsers(Array.isArray(res.data) ? res.data : res.data?.data || []);
         } catch (err) {
             notifyError(err.response?.data?.error?.message || 'Failed to fetch users');
         }
@@ -54,15 +54,16 @@ const CreateUserBySuperAdmin = () => {
         e.preventDefault();
         setCreating(true);
         try {
-            await api.post('/create-by-super-admin', form);
-            notifySuccess('User created successfully. Temporary password email sent.');
-            setShowModal(false);
+            const res = await api.post('/create-by-super-admin', form);
+            notifySuccess(res.data?.message || 'User created successfully.');
             setForm({ name: '', email: '', role: 'user' });
-            fetchUsers();
+            setShowModal(false);
+            await fetchUsers();
         } catch (err) {
             notifyError(err.response?.data?.error?.message || 'Failed to create user');
+        } finally {
+            setCreating(false);
         }
-        setCreating(false);
     };
 
     // Open role modal and initialize role select
@@ -117,8 +118,8 @@ const CreateUserBySuperAdmin = () => {
     const tableHeader = [
         { label: 'Name', key: 'name' },
         { label: 'Email', key: 'email' },
-        { label: 'Role', key: 'role' },
-        { label: 'Created At', key: 'createdAt', dataFormat: 'date' },
+        { label: 'Role', key: 'role', mobileBadge: true },
+        { label: 'Joined', key: 'createdAt', dataFormat: 'date' },
     ];
 
     // Action button for opening role modal
@@ -139,37 +140,43 @@ const CreateUserBySuperAdmin = () => {
         },
     ];
 
-    return (
-        <Container className="my-4">
-            <Row className="mb-3 align-items-center">
-                <Col className="text-start">
-                    <Button variant="primary" onClick={() => setShowModal(true)}>
-                        Create New User
-                    </Button>
-                </Col>
-            </Row>
+    if (loadingUsers) {
+        return <SkeletonUsersPage />;
+    }
 
-            {loadingUsers ? (
-                <div className="text-center my-5">
-                    <Spinner animation="border" />
+    return (
+        <Container className="page-shell my-2">
+            <div className="page-header">
+                <div>
+                    <h1 className="page-heading">Users</h1>
+                    <p className="page-sub">Create and manage accounts you own.</p>
                 </div>
-            ) : (
-                <TableUtil
-                    tableName="Users You Created"
-                    tableData={users}
-                    tableHeader={tableHeader}
-                    tableActions={tableActions}
-                    searchKeys={['name', 'email', 'role']}
-                    filters={{}}
-                    setFilters={() => { }}
-                    getCardBorderColor={(user) =>
-                        user.role === 'super_admin' ? '#0d6efd' : '#6c757d'
-                    }
-                />
-            )}
+                <Button variant="primary" className="touch-btn" onClick={() => setShowModal(true)}>
+                    Create user
+                </Button>
+            </div>
+
+            <TableUtil
+                tableName="Your users"
+                tableData={users}
+                tableHeader={tableHeader}
+                tableActions={tableActions}
+                searchKeys={['name', 'email', 'role']}
+                filters={{}}
+                setFilters={() => { }}
+                getCardBorderColor={(user) =>
+                    user.role === 'super_admin' ? '#0f766e' : '#64748b'
+                }
+            />
 
             {/* Create User Modal */}
-            <Modal show={showModal} onHide={() => setShowModal(false)} centered>
+            <Modal
+                show={showModal}
+                onHide={() => !creating && setShowModal(false)}
+                centered
+                backdrop={creating ? 'static' : true}
+                keyboard={!creating}
+            >
                 <Form onSubmit={handleSubmit}>
                     <Modal.Header closeButton>
                         <Modal.Title>Create User</Modal.Title>
@@ -182,7 +189,7 @@ const CreateUserBySuperAdmin = () => {
                                 name="name"
                                 value={form.name}
                                 onChange={handleChange}
-                                placeholder="Enter name"
+                                placeholder="Full name"
                                 required
                                 autoComplete="off"
                             />
@@ -195,19 +202,20 @@ const CreateUserBySuperAdmin = () => {
                                 name="email"
                                 value={form.email}
                                 onChange={handleChange}
-                                placeholder="Enter email"
+                                placeholder="user@example.com"
                                 required
                                 autoComplete="off"
                             />
                         </Form.Group>
 
-                        <Form.Group controlId="role" className="mb-3">
+                        <Form.Group controlId="role" className="mb-0">
                             <Form.Label>Role</Form.Label>
                             <Form.Select
                                 name="role"
                                 value={form.role}
                                 onChange={handleChange}
                                 required
+                                aria-label="Select user role"
                             >
                                 {roles.map((r) => (
                                     <option key={r} value={r}>
@@ -248,6 +256,7 @@ const CreateUserBySuperAdmin = () => {
                         <Form.Select
                             value={newRole}
                             onChange={(e) => setNewRole(e.target.value)}
+                            aria-label="Select new role"
                         >
                             {roles.map((r) => (
                                 <option key={r} value={r}>

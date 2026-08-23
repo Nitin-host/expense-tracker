@@ -1,67 +1,117 @@
-import React from 'react';
-import { Breadcrumb } from 'react-bootstrap';
-import { Link, useLocation } from 'react-router-dom';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Breadcrumb } from './ui';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import { FaHome } from 'react-icons/fa';
+import api from '../api/http';
 
-// Static route → label map
-const routeNameMap = {
-    '': 'Dashboard',
+const ROUTE_LABELS = {
+    home: 'Home',
+    solution: 'Solutions',
     dashboard: 'Dashboard',
-    'solution-cards': 'Solution Cards',
-    // add other fixed route names as needed
+    'collected-cash': 'Collected Cash',
+    'expense-data': 'Expenses',
+    reports: 'Reports',
+    'create-user': 'Users',
 };
 
-// Dynamic parameter label map
-const dynamicParamLabelMap = {
-    solutionId: (id) => `Solution Card #${id}`,
-    userId: (id) => `User #${id}`,
-    // add more as needed
-};
+const isMongoId = (segment) => /^[0-9a-fA-F]{24}$/.test(segment);
+
+const solutionNameCache = new Map();
 
 const AppBreadcrumbs = ({ theme = 'light' }) => {
     const location = useLocation();
-    const paths = location.pathname.split('/').filter(Boolean);
-    let pathSoFar = '';
+    const params = useParams();
+    const [solutionName, setSolutionName] = useState('');
+
+    const solutionId = useMemo(() => {
+        if (params.id && isMongoId(params.id)) return params.id;
+        const match = location.pathname.match(/^\/solution\/([^/]+)/);
+        const id = match?.[1];
+        return id && isMongoId(id) ? id : null;
+    }, [location.pathname, params.id]);
+
+    useEffect(() => {
+        if (!solutionId) {
+            setSolutionName('');
+            return undefined;
+        }
+
+        if (solutionNameCache.has(solutionId)) {
+            setSolutionName(solutionNameCache.get(solutionId));
+            return undefined;
+        }
+
+        let cancelled = false;
+        (async () => {
+            try {
+                const res = await api.get(`/solution/${solutionId}`);
+                const name =
+                    res.data?.solutionCard?.name ||
+                    res.data?.name ||
+                    res.data?.data?.name ||
+                    '';
+                solutionNameCache.set(solutionId, name);
+                if (!cancelled) setSolutionName(name);
+            } catch {
+                if (!cancelled) setSolutionName('');
+            }
+        })();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [solutionId]);
+
+    const crumbs = useMemo(() => {
+        const paths = location.pathname.split('/').filter(Boolean);
+        const items = [];
+        let pathSoFar = '';
+
+        paths.forEach((segment, index) => {
+            pathSoFar += `/${segment}`;
+            const isLast = index === paths.length - 1;
+
+            if (isMongoId(segment) && paths[index - 1] === 'solution') {
+                items.push({
+                    to: `/solution/${segment}/dashboard`,
+                    label: solutionName || 'Solution',
+                    active: isLast,
+                });
+                return;
+            }
+
+            const label =
+                ROUTE_LABELS[segment] ||
+                segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, ' ');
+
+            items.push({
+                to: pathSoFar,
+                label,
+                active: isLast,
+            });
+        });
+
+        return items;
+    }, [location.pathname, solutionName]);
+
+    if (!crumbs.length) return null;
 
     return (
-        <Breadcrumb className={`mb-0 breadcrumb-${theme}`}>
-            {/* Home icon breadcrumb pointing to root */}
-            <Breadcrumb.Item linkAs={Link} linkProps={{ to: '/home' }} aria-label="Home">
-                <FaHome />
+        <Breadcrumb className={theme === 'dark' ? 'app-breadcrumbs--dark' : 'app-breadcrumbs--light'}>
+            <Breadcrumb.Item linkAs={Link} linkProps={{ to: '/home' }} title="Home">
+                <FaHome aria-hidden />
             </Breadcrumb.Item>
-
-            {paths.map((segment, index) => {
-                pathSoFar += `/${segment}`;
-
-                // Detect if segment looks like param (e.g. numeric or UUID)
-                const isParam = /^\d+$/.test(segment) || /^[0-9a-fA-F-]{8,}$/.test(segment);
-
-                let label;
-
-                if (isParam && index > 0) {
-                    const paramName = paths[index - 1];
-                    const formatLabel = dynamicParamLabelMap[paramName];
-                    label = formatLabel ? formatLabel(segment) : segment;
-                } else {
-                    label = routeNameMap[segment] || segment.charAt(0).toUpperCase() + segment.slice(1);
-                }
-
-                const isLast = index === paths.length - 1;
-                const isSecondLast = index === paths.length - 2;
-
-                return (
-                    <Breadcrumb.Item
-                        key={pathSoFar}
-                        {...(!(isLast || isSecondLast) ? { linkAs: Link, linkProps: { to: pathSoFar } } : {})}
-                        active={isLast || isSecondLast}
-                        aria-current={isLast || isSecondLast ? 'page' : undefined}
-                        className={(isLast || isSecondLast) ? 'text-secondary' : ''}
-                        style={(isLast || isSecondLast) ? { color: '#6c757d', cursor: 'default', textDecoration: 'none' } : {}}
-                    >
-                        {label}
+            {crumbs.map((crumb) =>
+                crumb.active ? (
+                    <Breadcrumb.Item active key={crumb.to}>
+                        {crumb.label}
                     </Breadcrumb.Item>
-                );
-            })}
+                ) : (
+                    <Breadcrumb.Item key={crumb.to} linkAs={Link} linkProps={{ to: crumb.to }}>
+                        {crumb.label}
+                    </Breadcrumb.Item>
+                )
+            )}
         </Breadcrumb>
     );
 };
