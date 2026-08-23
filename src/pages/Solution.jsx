@@ -71,7 +71,8 @@ export default function Solution() {
     };
 
     const handleShare = async (solutionId, shareData) => {
-        await api.post(`/solution/${solutionId}/share`, shareData);
+        const res = await api.post(`/solution/${solutionId}/share`, shareData);
+        return res.data;
     };
 
     const subtitle =

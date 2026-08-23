@@ -4,6 +4,7 @@ import ExpenseForm from './ExpenseForm';
 import { Button, Modal } from '../components/ui';
 import { FaEdit, FaTrashAlt, FaEye, FaDownload } from 'react-icons/fa';
 import { fetchAndExport } from '../utils/export';
+import { formatDate } from '../utils/formatDate';
 import api from '../api/http';
 import { useParams } from 'react-router-dom';
 import { useAlert } from '../context/alertContext';
@@ -153,23 +154,33 @@ function ExpenseManager() {
     ];
 
     const dateFilters = (
-        <div className="d-flex flex-wrap gap-2 align-items-center">
-            <input
-                type="date"
-                className="form-control form-control-sm"
-                style={{ maxWidth: 150 }}
-                value={filters.from || ''}
-                onChange={(e) => handleServerFilterChange({ ...filters, from: e.target.value }, searchText)}
-                aria-label="From date"
-            />
-            <input
-                type="date"
-                className="form-control form-control-sm"
-                style={{ maxWidth: 150 }}
-                value={filters.to || ''}
-                onChange={(e) => handleServerFilterChange({ ...filters, to: e.target.value }, searchText)}
-                aria-label="To date"
-            />
+        <div className="et-date-filter-bar">
+            <label className="et-date-filter">
+                <span className="et-date-filter__label">From</span>
+                <input
+                    type="date"
+                    className="et-date-filter__input form-control form-control-sm"
+                    value={filters.from || ''}
+                    onChange={(e) => handleServerFilterChange({ ...filters, from: e.target.value }, searchText)}
+                    aria-label="From date"
+                />
+                <span className={`et-date-filter__display${filters.from ? '' : ' et-date-filter__display--empty'}`} aria-hidden>
+                    {filters.from ? formatDate(filters.from) : 'dd-mm-yyyy'}
+                </span>
+            </label>
+            <label className="et-date-filter">
+                <span className="et-date-filter__label">To</span>
+                <input
+                    type="date"
+                    className="et-date-filter__input form-control form-control-sm"
+                    value={filters.to || ''}
+                    onChange={(e) => handleServerFilterChange({ ...filters, to: e.target.value }, searchText)}
+                    aria-label="To date"
+                />
+                <span className={`et-date-filter__display${filters.to ? '' : ' et-date-filter__display--empty'}`} aria-hidden>
+                    {filters.to ? formatDate(filters.to) : 'dd-mm-yyyy'}
+                </span>
+            </label>
         </div>
     );
 
@@ -280,7 +291,7 @@ function ExpenseManager() {
         },
         { label: 'Paid by', key: 'paidBy.name' },
         { label: 'Payment', key: 'payments.paymentMethod' },
-        { label: 'Date', key: 'createdAt', dataFormat: 'date' },
+        { label: 'Date', key: 'createdAt', dataFormat: 'date', mobileDate: true },
     ];
 
     return (
@@ -307,9 +318,9 @@ function ExpenseManager() {
                     </Button>
                 </div>
             </div>
-            {dateFilters}
             <TableUtil
                 tableName="All expenses"
+                toolbarExtra={dateFilters}
                 tableData={expenses}
                 tableHeader={tableHeader}
                 tableActions={actions}

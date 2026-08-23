@@ -10,6 +10,12 @@ const ROLE_OPTIONS = [
     { value: 'editor', label: 'Editor' },
 ];
 
+const normalizeUserId = (value) => {
+    if (value == null) return null;
+    if (typeof value === 'object' && value._id != null) return String(value._id);
+    return String(value);
+};
+
 const getInitials = (name) =>
     name
         ? name
@@ -110,15 +116,34 @@ export default function ShareSolutionModal({ show, onHide, solution, onDone, onS
                 ...selectedUsers.map((u) => ({ user: u.value, role: u.role })),
                 ...sharedUsers
                     .filter((u) => u.role !== 'owner')
-                    .map((u) => ({ user: u.user, role: u.role })),
+                    .map((u) => ({ user: normalizeUserId(u.user), role: u.role })),
             ];
 
-            await onShare(solution._id, {
+            const result = await onShare(solution._id, {
                 sharedWith: validShares,
                 notifyUsers: notify,
+                notifyUserIds: notify ? selectedUsers.map((u) => u.value) : [],
             });
 
-            notifySuccess('Sharing updated successfully!');
+            if (notify) {
+                const sent = result?.emailsSent ?? 0;
+                const failed = result?.emailErrors?.length ?? 0;
+                if (sent > 0 && failed === 0) {
+                    notifySuccess(
+                        sent === 1
+                            ? 'Sharing updated and notification email sent.'
+                            : `Sharing updated and ${sent} notification emails sent.`
+                    );
+                } else if (sent > 0 && failed > 0) {
+                    notifySuccess(`Sharing updated. ${sent} email(s) sent, ${failed} failed.`);
+                } else if (failed > 0) {
+                    notifyError('Sharing updated but notification emails failed to send.');
+                } else {
+                    notifySuccess('Sharing updated. Select users above to send notification emails.');
+                }
+            } else {
+                notifySuccess('Sharing updated successfully!');
+            }
             onDone && onDone();
             onHide();
         } catch (err) {

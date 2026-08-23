@@ -12,12 +12,19 @@ const HIGHLIGHT_KEYS = new Set(['amount', 'advancePaid', 'pendingAmount', 'total
 
 function isEmptyCellValue(val) {
     if (val === undefined || val === null || val === '') return true;
+    if (val === '—' || val === '-') return true;
     if (Array.isArray(val) && val.length === 0) return true;
     return false;
 }
 
 function getFieldKey(key) {
     return String(key || '').split('.').pop().toLowerCase();
+}
+
+function getNestedValue(obj, path) {
+    return String(path || '')
+        .split('.')
+        .reduce((o, k) => (o != null ? o[k] : undefined), obj);
 }
 
 function formatRoleLabel(role) {
@@ -67,7 +74,12 @@ function MobileCard({
         if (col.mobileHide) return;
         const fieldKey = getFieldKey(col.key);
         const raw = renderCell(row, col.key, col.dataFormat, col);
-        if (isEmptyCellValue(raw) || raw === '-') return;
+        if (isEmptyCellValue(raw)) return;
+
+        if (col.mobileDate || col.dataFormat === 'date') {
+            details.unshift({ label: col.label, value: raw, key: col.key, isDate: true });
+            return;
+        }
 
         if (col.mobileBadge || BADGE_KEYS.has(fieldKey)) {
             badges.push({ label: col.label, value: raw, key: col.key });
@@ -90,6 +102,9 @@ function MobileCard({
         ? renderCell(row, primary.key, primary.dataFormat, primary)
         : 'Untitled';
 
+    const dateMeta = details.find((d) => d.isDate) || null;
+    const detailRows = dateMeta ? details.filter((d) => !d.isDate) : details;
+
     return (
         <article className="mobile-data-card" style={{ '--card-accent': accent }}>
             <div className="mobile-data-card__accent" aria-hidden />
@@ -98,6 +113,11 @@ function MobileCard({
                 <header className="mobile-data-card__header">
                     <div className="mobile-data-card__title-wrap">
                         <h3 className="mobile-data-card__title">{title}</h3>
+                        {dateMeta && (
+                            <time className="mobile-data-card__date" dateTime={String(getNestedValue(row, dateMeta.key) || '')}>
+                                {dateMeta.value}
+                            </time>
+                        )}
                         {badges.length > 0 && (
                             <div className="mobile-data-card__badges">
                                 {badges.map(({ label, value, key }) => (
@@ -127,9 +147,9 @@ function MobileCard({
                     </div>
                 )}
 
-                {details.length > 0 && (
+                {detailRows.length > 0 && (
                     <dl className="mobile-data-card__details">
-                        {details.map(({ label, value, key }) => (
+                        {detailRows.map(({ label, value, key }) => (
                             <div key={key} className="mobile-data-card__detail-row">
                                 <dt>{label}</dt>
                                 <dd>{value}</dd>
@@ -203,6 +223,7 @@ function TableUtil({
     searchText: controlledSearch = undefined,
     setSearchText: setControlledSearch = undefined,
     onServerFilterChange = null,
+    toolbarExtra = null,
 }) {
     const [internalSearch, setInternalSearch] = useState('');
     const searchText = controlledSearch !== undefined ? controlledSearch : internalSearch;
@@ -265,7 +286,7 @@ function TableUtil({
         };
     }, []);
 
-    const getNestedValue = (obj, path) =>
+    const getNestedValueInTable = (obj, path) =>
         path.split('.').reduce((o, k) => (o ? o[k] : undefined), obj);
 
     const filteredData = useMemo(() => {
@@ -277,7 +298,7 @@ function TableUtil({
             const s = searchText.toLowerCase();
             filtered = filtered.filter((item) =>
                 searchKeys.some((key) => {
-                    const val = getNestedValue(item, key);
+                    const val = getNestedValueInTable(item, key);
                     return val && val.toString().toLowerCase().includes(s);
                 })
             );
@@ -287,7 +308,7 @@ function TableUtil({
             Object.entries(filterVals).forEach(([key, values]) => {
                 if (values && values.length > 0) {
                     filtered = filtered.filter((item) => {
-                        const val = getNestedValue(item, key);
+                        const val = getNestedValueInTable(item, key);
                         return val && values.includes(String(val));
                     });
                 }
@@ -400,7 +421,10 @@ function TableUtil({
             return colDef.render(val, row);
         }
 
-        if (val === undefined || val === null) return '';
+        if (val === undefined || val === null) {
+            if (format === 'date') return formatDate(val);
+            return '';
+        }
 
         if (Array.isArray(val)) {
             const flattened = val.flat(Infinity).filter((v) => v != null);
@@ -426,9 +450,10 @@ function TableUtil({
     return (
         <div className="table-util-wrap page-surface overflow-hidden">
             <div className="table-util-toolbar">
-                <h5 className="mb-0 font-semibold tracking-[-0.02em]">{tableName}</h5>
-                <div className="table-util-toolbar__controls">
-                    {filterKeys && filterKeys.length > 0 && (
+                <h5 className="table-util-toolbar__title">{tableName}</h5>
+
+                {filterKeys && filterKeys.length > 0 ? (
+                    <div className="table-util-toolbar__filter">
                         <FilterPopover
                             filterKeys={filterKeys}
                             filters={filterVals}
@@ -439,35 +464,40 @@ function TableUtil({
                                 if (serverPagination && onServerFilterChange) onServerFilterChange(val);
                             }}
                         />
-                    )}
-                    {searchKeys && searchKeys.length > 0 && (
-                        <InputGroup className="mb-0 table-util-toolbar__search">
-                            <FormControl
-                                placeholder="Search entries..."
-                                value={searchText}
-                                inputMode="search"
-                                enterKeyHint="search"
-                                onChange={(e) => {
-                                    const value = e.target.value;
-                                    setSearchText(value);
-                                    setCurrentPage(1);
-                                    if (serverPagination && onServerFilterChange) {
-                                        if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
-                                        searchDebounceRef.current = setTimeout(() => {
-                                            onServerFilterChange(filterVals, value);
-                                        }, 350);
-                                    }
-                                }}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter' && serverPagination && onServerFilterChange) {
-                                        if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
-                                        onServerFilterChange(filterVals, e.target.value);
-                                    }
-                                }}
-                            />
-                        </InputGroup>
-                    )}
-                </div>
+                    </div>
+                ) : null}
+
+                {searchKeys && searchKeys.length > 0 ? (
+                    <InputGroup className="mb-0 table-util-toolbar__search">
+                        <FormControl
+                            placeholder="Search entries..."
+                            value={searchText}
+                            inputMode="search"
+                            enterKeyHint="search"
+                            onChange={(e) => {
+                                const value = e.target.value;
+                                setSearchText(value);
+                                setCurrentPage(1);
+                                if (serverPagination && onServerFilterChange) {
+                                    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+                                    searchDebounceRef.current = setTimeout(() => {
+                                        onServerFilterChange(filterVals, value);
+                                    }, 350);
+                                }
+                            }}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' && serverPagination && onServerFilterChange) {
+                                    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+                                    onServerFilterChange(filterVals, e.target.value);
+                                }
+                            }}
+                        />
+                    </InputGroup>
+                ) : null}
+
+                {toolbarExtra ? (
+                    <div className="table-util-toolbar__extra">{toolbarExtra}</div>
+                ) : null}
             </div>
 
             {mobileView ? (

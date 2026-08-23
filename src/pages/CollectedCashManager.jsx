@@ -205,7 +205,7 @@ function CollectedCashManager() {
             mobileHighlight: true,
             render: (value) => `₹${Number(value).toFixed(2)}`,
         },
-        { label: 'Collected', key: 'collectedDate', dataFormat: 'date' },
+        { label: 'Collected', key: 'collectedDate', dataFormat: 'date', mobileDate: true },
         { label: 'Updated', key: 'updatedDate', dataFormat: 'date', mobileHide: true },
     ];
 

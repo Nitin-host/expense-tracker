@@ -1,176 +1,157 @@
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 import AlertProvider from './components/AlertProvider';
+import AppErrorBoundary from './components/AppErrorBoundary';
 import { ThemeProvider } from './utils/ThemeContext';
 import InstallPwaPrompt from './components/InstallPwaPrompt';
+import { lazyWithRetry } from './utils/lazyWithRetry';
 
-
-
-const LoginPage = lazy(() => import('./pages/LoginPage'));
-
-const RegisterPage = lazy(() => import('./pages/RegisterPage'));
-
-const ChangePassword = lazy(() => import('./pages/ChangePassword'));
-
-const ForgotPasswordFlow = lazy(() => import('./pages/ForgotPasswordFlow'));
-
-const Home = lazy(() => import('./pages/Home'));
-
-const Solution = lazy(() => import('./pages/Solution'));
-
-const CreateUserBySuperAdmin = lazy(() => import('./pages/CreateUserBySuperAdmin'));
-
-const Dashboard = lazy(() => import('./pages/Dashboard'));
-
-const CollectedCashManager = lazy(() => import('./pages/CollectedCashManager'));
-
-const ExpenseManager = lazy(() => import('./pages/ExpenseManager'));
-
-const Reports = lazy(() => import('./pages/Reports'));
-
-
+const LoginPage = lazyWithRetry(() => import('./pages/LoginPage'));
+const RegisterPage = lazyWithRetry(() => import('./pages/RegisterPage'));
+const ChangePassword = lazyWithRetry(() => import('./pages/ChangePassword'));
+const ForgotPasswordFlow = lazyWithRetry(() => import('./pages/ForgotPasswordFlow'));
+const Home = lazyWithRetry(() => import('./pages/Home'));
+const Solution = lazyWithRetry(() => import('./pages/Solution'));
+const CreateUserBySuperAdmin = lazyWithRetry(() => import('./pages/CreateUserBySuperAdmin'));
+const Dashboard = lazyWithRetry(() => import('./pages/Dashboard'));
+const CollectedCashManager = lazyWithRetry(() => import('./pages/CollectedCashManager'));
+const ExpenseManager = lazyWithRetry(() => import('./pages/ExpenseManager'));
+const Reports = lazyWithRetry(() => import('./pages/Reports'));
 
 function AuthRouteFallback() {
-
     return (
-
         <div className="auth-route-fallback" aria-busy="true" aria-label="Loading">
-
             <span className="sk-pulse auth-route-fallback__spinner" />
-
         </div>
-
     );
-
 }
 
-
+function LazyRoute({ children }) {
+    return (
+        <AppErrorBoundary>
+            <Suspense fallback={<AuthRouteFallback />}>{children}</Suspense>
+        </AppErrorBoundary>
+    );
+}
 
 const App = () => {
-
     return (
         <Router>
             <ThemeProvider>
                 <AlertProvider>
-                    <Routes>
+                    <AppErrorBoundary>
+                        <Routes>
+                            <Route
+                                path="/login"
+                                element={
+                                    <LazyRoute>
+                                        <LoginPage />
+                                    </LazyRoute>
+                                }
+                            />
+                            <Route
+                                path="/register"
+                                element={
+                                    <LazyRoute>
+                                        <RegisterPage />
+                                    </LazyRoute>
+                                }
+                            />
+                            <Route
+                                path="/change-password"
+                                element={
+                                    <LazyRoute>
+                                        <ChangePassword />
+                                    </LazyRoute>
+                                }
+                            />
+                            <Route
+                                path="/forgot-password"
+                                element={
+                                    <LazyRoute>
+                                        <ForgotPasswordFlow />
+                                    </LazyRoute>
+                                }
+                            />
 
-                    <Route
+                            <Route element={<ProtectedRoute />}>
+                                <Route element={<Layout />}>
+                                    <Route
+                                        path="/home"
+                                        element={
+                                            <LazyRoute>
+                                                <Home />
+                                            </LazyRoute>
+                                        }
+                                    />
+                                    <Route
+                                        path="/solution"
+                                        element={
+                                            <LazyRoute>
+                                                <Solution />
+                                            </LazyRoute>
+                                        }
+                                    />
+                                    <Route
+                                        path="/create-user"
+                                        element={
+                                            <LazyRoute>
+                                                <CreateUserBySuperAdmin />
+                                            </LazyRoute>
+                                        }
+                                    />
+                                    <Route
+                                        path="/solution/:id/dashboard"
+                                        element={
+                                            <LazyRoute>
+                                                <Dashboard />
+                                            </LazyRoute>
+                                        }
+                                    />
+                                    <Route
+                                        path="/solution/:id/collected-cash"
+                                        element={
+                                            <LazyRoute>
+                                                <CollectedCashManager />
+                                            </LazyRoute>
+                                        }
+                                    />
+                                    <Route
+                                        path="/solution/:id/expense-data"
+                                        element={
+                                            <LazyRoute>
+                                                <ExpenseManager />
+                                            </LazyRoute>
+                                        }
+                                    />
+                                    <Route
+                                        path="/solution/:id/reports"
+                                        element={
+                                            <LazyRoute>
+                                                <Reports />
+                                            </LazyRoute>
+                                        }
+                                    />
+                                </Route>
+                            </Route>
 
-                        path="/login"
-
-                        element={
-
-                            <Suspense fallback={<AuthRouteFallback />}>
-
-                                <LoginPage />
-
-                            </Suspense>
-
-                        }
-
-                    />
-
-                    <Route
-
-                        path="/register"
-
-                        element={
-
-                            <Suspense fallback={<AuthRouteFallback />}>
-
-                                <RegisterPage />
-
-                            </Suspense>
-
-                        }
-
-                    />
-
-                    <Route
-
-                        path="/change-password"
-
-                        element={
-
-                            <Suspense fallback={<AuthRouteFallback />}>
-
-                                <ChangePassword />
-
-                            </Suspense>
-
-                        }
-
-                    />
-
-                    <Route
-
-                        path="/forgot-password"
-
-                        element={
-
-                            <Suspense fallback={<AuthRouteFallback />}>
-
-                                <ForgotPasswordFlow />
-
-                            </Suspense>
-
-                        }
-
-                    />
-
-
-
-                    <Route element={<ProtectedRoute />}>
-
-                        <Route element={<Layout />}>
-
-                            <Route path="/home" element={<Home />} />
-
-                            <Route path="/solution" element={<Solution />} />
-
-                            <Route path="/create-user" element={<CreateUserBySuperAdmin />} />
-
-                            <Route path="/solution/:id/dashboard" element={<Dashboard />} />
-
-                            <Route path="/solution/:id/collected-cash" element={<CollectedCashManager />} />
-
-                            <Route path="/solution/:id/expense-data" element={<ExpenseManager />} />
-
-                            <Route path="/solution/:id/reports" element={<Reports />} />
-
-                        </Route>
-
-                    </Route>
-
-
-
-                    <Route
-
-                        path="*"
-
-                        element={
-
-                            <Suspense fallback={<AuthRouteFallback />}>
-
-                                <LoginPage />
-
-                            </Suspense>
-
-                        }
-
-                    />
-
-                </Routes>
-                    <InstallPwaPrompt />
+                            <Route
+                                path="*"
+                                element={
+                                    <LazyRoute>
+                                        <LoginPage />
+                                    </LazyRoute>
+                                }
+                            />
+                        </Routes>
+                        <InstallPwaPrompt />
+                    </AppErrorBoundary>
                 </AlertProvider>
             </ThemeProvider>
         </Router>
     );
 };
 
-
-
 export default App;
-

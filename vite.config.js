@@ -33,6 +33,8 @@ export default defineConfig(({ mode }) => {
                 workbox: {
                     globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,avif,woff2}'],
                     maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
+                    navigateFallback: '/index.html',
+                    navigateFallbackDenylist: [/^\/api/, /\/[^/?]+\.[^/]+$/],
                     runtimeCaching: [
                         {
                             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
@@ -69,7 +71,6 @@ export default defineConfig(({ mode }) => {
                 output: {
                     manualChunks: {
                         'vendor-react': ['react', 'react-dom', 'react-router-dom', 'react-redux', '@reduxjs/toolkit'],
-                        'vendor-shared': ['src/context/alertContext.js'],
                         'vendor-charts': ['apexcharts', 'react-apexcharts'],
                         'vendor-xlsx': ['xlsx'],
                     },

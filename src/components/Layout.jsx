@@ -7,6 +7,7 @@ import { Modal, Button } from './ui';
 import Sidebar from './Sidebar';
 import MobileBottomNav from './MobileBottomNav';
 import AppBreadcrumbs from './AppBreadcrumbs';
+import AppErrorBoundary from './AppErrorBoundary';
 import { PageRouteSkeleton } from './Skeleton';
 import { ThemeContext } from '../utils/ThemeContext';
 import api from '../api/http';
@@ -230,9 +231,13 @@ const Layout = () => {
                     }`}
                     aria-live="polite"
                 >
-                    <Suspense fallback={<PageRouteSkeleton pathname={location.pathname} />}>
-                        <Outlet />
-                    </Suspense>
+                    <AppErrorBoundary>
+                        <Suspense
+                            fallback={<PageRouteSkeleton pathname={location.pathname} />}
+                        >
+                            <Outlet />
+                        </Suspense>
+                    </AppErrorBoundary>
                 </main>
 
                 {isMobile && <MobileBottomNav />}
