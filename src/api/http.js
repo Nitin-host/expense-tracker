@@ -22,6 +22,8 @@ const processQueue = (error, token = null) => {
     failedQueue = [];
 };
 
+let cachedAuthToken = null;
+
 const readAuth = () => {
     try {
         return JSON.parse(localStorage.getItem('auth') || 'null');
@@ -29,6 +31,12 @@ const readAuth = () => {
         return null;
     }
 };
+
+const syncCachedToken = () => {
+    cachedAuthToken = readAuth()?.token || null;
+};
+
+syncCachedToken();
 
 const writeAuthToken = (token, refreshToken) => {
     const oldAuth = readAuth() || {};
@@ -38,6 +46,7 @@ const writeAuthToken = (token, refreshToken) => {
         ...(refreshToken ? { refreshToken } : {}),
     };
     localStorage.setItem('auth', JSON.stringify(next));
+    cachedAuthToken = token;
     if (typeof onTokensUpdated === 'function') {
         onTokensUpdated({ token, refreshToken: refreshToken || next.refreshToken });
     }
@@ -45,9 +54,9 @@ const writeAuthToken = (token, refreshToken) => {
 
 api.interceptors.request.use(
     (config) => {
-        const storedAuth = readAuth();
-        if (storedAuth?.token) {
-            config.headers.Authorization = `Bearer ${storedAuth.token}`;
+        if (!cachedAuthToken) syncCachedToken();
+        if (cachedAuthToken) {
+            config.headers.Authorization = `Bearer ${cachedAuthToken}`;
         }
         return config;
     },
@@ -77,6 +86,7 @@ api.interceptors.response.use(
 
         if (!refreshToken) {
             localStorage.removeItem('auth');
+            cachedAuthToken = null;
             window.location.href = '/login';
             return Promise.reject(error);
         }
@@ -100,6 +110,7 @@ api.interceptors.response.use(
         } catch (refreshErr) {
             processQueue(refreshErr, null);
             localStorage.removeItem('auth');
+            cachedAuthToken = null;
             window.location.href = '/login';
             return Promise.reject(refreshErr);
         } finally {
@@ -107,5 +118,9 @@ api.interceptors.response.use(
         }
     }
 );
+
+export function syncAuthTokenCache() {
+    syncCachedToken();
+}
 
 export default api;

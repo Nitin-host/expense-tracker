@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback, useContext } from 'react';
 import { Table, InputGroup, FormControl, Pagination } from '../components/ui';
 import FilterPopover from './FilterPopover';
 import { SkeletonTableCards } from '../components/Skeleton';
 import { formatDate } from './formatDate';
+import { ThemeContext } from './ThemeContext';
 
 const MOBILE_MQ = '(max-width: 767.98px)';
 const MOBILE_BATCH = 10;
@@ -236,11 +237,7 @@ function TableUtil({
     const [mobileView, setMobileView] = useState(
         typeof window !== 'undefined' ? window.matchMedia(MOBILE_MQ).matches : false
     );
-    const [theme, setTheme] = useState(
-        typeof document !== 'undefined'
-            ? document.body.getAttribute('data-theme') || 'light'
-            : 'light'
-    );
+    const { theme } = useContext(ThemeContext);
     const sentinelRef = useRef(null);
     const loadingMoreRef = useRef(loadingMore);
     const searchDebounceRef = useRef(null);
@@ -290,17 +287,7 @@ function TableUtil({
         const mq = window.matchMedia(MOBILE_MQ);
         const onChange = (e) => setMobileView(e.matches);
         mq.addEventListener('change', onChange);
-
-        const themeObserver = new MutationObserver(() => {
-            const currentTheme = document.body.getAttribute('data-theme') || 'light';
-            setTheme(currentTheme);
-        });
-        themeObserver.observe(document.body, { attributes: true, attributeFilter: ['data-theme'] });
-
-        return () => {
-            mq.removeEventListener('change', onChange);
-            themeObserver.disconnect();
-        };
+        return () => mq.removeEventListener('change', onChange);
     }, []);
 
     const getNestedValueInTable = (obj, path) =>

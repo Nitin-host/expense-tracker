@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import TableUtil from '../utils/TableUtil';
 import { Button, Modal, Form } from '../components/ui';
 import { FaEdit, FaTrashAlt, FaDownload } from 'react-icons/fa';
@@ -33,20 +33,35 @@ function CollectedCashManager() {
     const [formData, setFormData] = useState({
         name: '',
         amount: '',
+        paymentMethod: 'cash',
     });
 
     const { notifySuccess, notifyError } = useAlert();
     const [accessLevel, setAccessLevel] = useState(null);
 
+    const searchTextRef = useRef(searchText);
+    const notifyErrorRef = useRef(notifyError);
+    const abortRef = useRef(null);
+    searchTextRef.current = searchText;
+    notifyErrorRef.current = notifyError;
+
     const fetchCollectedCash = useCallback(async (pageNum = 1, { append = false, searchOverride } = {}) => {
+        if (abortRef.current) abortRef.current.abort();
+        const controller = new AbortController();
+        abortRef.current = controller;
+
         if (append) setLoadingMore(true);
         else setLoading(true);
         try {
-            const activeSearch = searchOverride ?? searchText;
+            const activeSearch = searchOverride ?? searchTextRef.current;
             const params = { page: pageNum, limit: 20 };
             if (activeSearch?.trim()) params.q = activeSearch.trim();
 
-            const res = await api.get(`/collected-cash/solution/${solutionId}`, { params });
+            const res = await api.get(`/collected-cash/solution/${solutionId}`, {
+                params,
+                signal: controller.signal,
+            });
+            if (controller.signal.aborted) return;
             const list = res.data.collectedCash || res.data.data || [];
             setCollectedCashList((prev) => {
                 if (!append) return list;
@@ -65,13 +80,16 @@ function CollectedCashManager() {
             setPage(nextPage);
             setAccessLevel(res.data.accessLevel || null);
         } catch (err) {
+            if (err.name === 'CanceledError' || err.code === 'ERR_CANCELED') return;
             const apiMessage = err?.response?.data?.error?.message;
-            notifyError(apiMessage || 'Failed to load collected cash data');
+            notifyErrorRef.current(apiMessage || 'Failed to load collected cash data');
         } finally {
-            setLoading(false);
-            setLoadingMore(false);
+            if (!controller.signal.aborted) {
+                setLoading(false);
+                setLoadingMore(false);
+            }
         }
-    }, [solutionId, searchText, notifyError]);
+    }, [solutionId]);
 
     const handleServerFilterChange = (_nextFilters, nextSearch) => {
         if (nextSearch !== undefined) setSearchText(nextSearch);
@@ -87,18 +105,24 @@ function CollectedCashManager() {
             setPage(1);
             fetchCollectedCash(1, { append: false });
         }
+        return () => {
+            if (abortRef.current) abortRef.current.abort();
+        };
     }, [solutionId, fetchCollectedCash]);
+
+    const fetchRef = useRef(fetchCollectedCash);
+    fetchRef.current = fetchCollectedCash;
 
     useEffect(() => {
         const mq = window.matchMedia('(max-width: 767.98px)');
         const onChange = (e) => {
             if (!e.matches && solutionId) {
-                fetchCollectedCash(1, { append: false });
+                fetchRef.current(1, { append: false });
             }
         };
         mq.addEventListener('change', onChange);
         return () => mq.removeEventListener('change', onChange);
-    }, [solutionId, fetchCollectedCash]);
+    }, [solutionId]);
 
     const handleLoadMore = () => {
         if (loadingMore || !pagination.hasMore) return;
@@ -112,7 +136,7 @@ function CollectedCashManager() {
 
     const openAddForm = () => {
         setEditableCash(null);
-        setFormData({ name: '', amount: '' });
+        setFormData({ name: '', amount: '', paymentMethod: 'cash' });
         setShowForm(true);
     };
 
@@ -121,6 +145,7 @@ function CollectedCashManager() {
         setFormData({
             name: cash.name,
             amount: cash.amount.toString(),
+            paymentMethod: cash.paymentMethod === 'upi' ? 'upi' : 'cash',
         });
         setShowForm(true);
     };
@@ -128,7 +153,7 @@ function CollectedCashManager() {
     const closeForm = () => {
         setEditableCash(null);
         setShowForm(false);
-        setFormData({ name: '', amount: '' });
+        setFormData({ name: '', amount: '', paymentMethod: 'cash' });
     };
 
     const handleFormChange = (e) => {
@@ -157,6 +182,7 @@ function CollectedCashManager() {
                 await api.put(`/collected-cash/${editableCash._id}`, {
                     name: formData.name.trim(),
                     amount: Number(formData.amount),
+                    paymentMethod: formData.paymentMethod,
                 });
                 notifySuccess('Collected cash updated successfully!');
             } else {
@@ -164,6 +190,7 @@ function CollectedCashManager() {
                     solutionCardId: solutionId,
                     name: formData.name.trim(),
                     amount: Number(formData.amount),
+                    paymentMethod: formData.paymentMethod,
                 });
                 notifySuccess('Collected cash added successfully!');
             }
@@ -216,6 +243,12 @@ function CollectedCashManager() {
             dataFormat: 'currency',
             mobileHighlight: true,
             render: (value) => `₹${Number(value).toFixed(2)}`,
+        },
+        {
+            label: 'Method',
+            key: 'paymentMethod',
+            mobileBadge: true,
+            render: (value) => String(value || 'cash').toUpperCase(),
         },
         { label: 'Collected', key: 'collectedDate', dataFormat: 'date', mobileDate: true },
         { label: 'Updated', key: 'updatedDate', dataFormat: 'date', mobileHide: true },
@@ -285,7 +318,7 @@ function CollectedCashManager() {
                             />
                         </Form.Group>
 
-                        <Form.Group className="mb-0" controlId="collectedCashAmount">
+                        <Form.Group className="mb-3" controlId="collectedCashAmount">
                             <Form.Label>Amount</Form.Label>
                             <Form.Control
                                 type="text"
@@ -297,6 +330,19 @@ function CollectedCashManager() {
                                 required
                                 autoComplete="off"
                             />
+                        </Form.Group>
+
+                        <Form.Group className="mb-0" controlId="collectedCashMethod">
+                            <Form.Label>Payment Method</Form.Label>
+                            <Form.Select
+                                name="paymentMethod"
+                                value={formData.paymentMethod}
+                                onChange={handleFormChange}
+                                required
+                            >
+                                <option value="cash">Cash</option>
+                                <option value="upi">UPI</option>
+                            </Form.Select>
                         </Form.Group>
                     </Modal.Body>
                     <Modal.Footer>

@@ -1,12 +1,13 @@
 // src/store/authSlice.js
 
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import api from '../api/http';
+import api, { syncAuthTokenCache } from '../api/http';
 
 // Utility functions for localStorage persistence
 const saveAuthToLocal = (authState) => {
     try {
         localStorage.setItem('auth', JSON.stringify(authState));
+        syncAuthTokenCache();
     } catch (e) {
         console.error('Failed to save auth data to localStorage:', e);
     }
@@ -26,6 +27,7 @@ const getAuthFromLocal = () => {
 const clearAuthFromLocal = () => {
     try {
         localStorage.removeItem('auth');
+        syncAuthTokenCache();
     } catch (e) {
         console.error('Failed to clear auth data from localStorage:', e);
     }

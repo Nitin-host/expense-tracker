@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { AlertContext } from '../context/alertContext';
 import { Alert } from './ui';
 
@@ -13,16 +13,19 @@ export default function AlertProvider({ children }) {
         return () => clearTimeout(timer);
     }, [alert.show]);
 
-    const notify = (message, variant = 'success') => {
+    const notify = useCallback((message, variant = 'success') => {
         setAlert({ show: true, message, variant });
-    };
+    }, []);
 
-    const value = {
-        notifySuccess: (msg) => notify(msg, 'success'),
-        notifyError: (msg) => notify(msg, 'danger'),
-        notifyWarning: (msg) => notify(msg, 'warning'),
-        notifyInfo: (msg) => notify(msg, 'info'),
-    };
+    const notifySuccess = useCallback((msg) => notify(msg, 'success'), [notify]);
+    const notifyError = useCallback((msg) => notify(msg, 'danger'), [notify]);
+    const notifyWarning = useCallback((msg) => notify(msg, 'warning'), [notify]);
+    const notifyInfo = useCallback((msg) => notify(msg, 'info'), [notify]);
+
+    const value = useMemo(
+        () => ({ notifySuccess, notifyError, notifyWarning, notifyInfo }),
+        [notifySuccess, notifyError, notifyWarning, notifyInfo]
+    );
 
     return (
         <AlertContext.Provider value={value}>
@@ -32,8 +35,7 @@ export default function AlertProvider({ children }) {
                     variant={alert.variant}
                     dismissible
                     onClose={() => setAlert((prev) => ({ ...prev, show: false }))}
-                    className="position-fixed bottom-0 start-50 translate-middle-x mb-3"
-                    style={{ zIndex: 1200, minWidth: '280px', maxWidth: '90vw' }}
+                    className="et-alert-toast"
                 >
                     {alert.message}
                 </Alert>

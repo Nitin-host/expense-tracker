@@ -1,14 +1,16 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import TableUtil from '../utils/TableUtil';
-import ExpenseForm from './ExpenseForm';
 import { Button, Modal } from '../components/ui';
-import { FaEdit, FaTrashAlt, FaEye, FaDownload } from 'react-icons/fa';
+import { FaEdit, FaTrashAlt, FaEye, FaDownload, FaPlusCircle } from 'react-icons/fa';
 import { fetchAndExport } from '../utils/export';
 import { formatDate } from '../utils/formatDate';
 import api from '../api/http';
 import { useParams } from 'react-router-dom';
 import { useAlert } from '../context/alertContext';
 import { SkeletonTablePage } from '../components/Skeleton';
+
+const ExpenseForm = lazy(() => import('./ExpenseForm'));
+const AddPaymentForm = lazy(() => import('./AddPaymentForm'));
 
 function ExpenseManager() {
     const { id: solutionId } = useParams();
@@ -21,6 +23,7 @@ function ExpenseManager() {
 
     const [showForm, setShowForm] = useState(false);
     const [editableExpense, setEditableExpense] = useState(null);
+    const [paymentModal, setPaymentModal] = useState({ show: false, expense: null });
 
     const [filters, setFilters] = useState({});
     const [searchText, setSearchText] = useState('');
@@ -33,12 +36,25 @@ function ExpenseManager() {
     const { notifySuccess, notifyError } = useAlert();
     const [accessLevel, setAccessLevel] = useState(null);
 
+    const filtersRef = useRef(filters);
+    const searchTextRef = useRef(searchText);
+    const notifyErrorRef = useRef(notifyError);
+    const abortRef = useRef(null);
+    const filterDebounceRef = useRef(null);
+    filtersRef.current = filters;
+    searchTextRef.current = searchText;
+    notifyErrorRef.current = notifyError;
+
     const fetchExpenses = useCallback(async (pageNum = 1, { append = false, filterOverride, searchOverride } = {}) => {
+        if (abortRef.current) abortRef.current.abort();
+        const controller = new AbortController();
+        abortRef.current = controller;
+
         if (append) setLoadingMore(true);
         else setLoading(true);
         try {
-            const activeFilters = filterOverride ?? filters;
-            const activeSearch = searchOverride ?? searchText;
+            const activeFilters = filterOverride ?? filtersRef.current;
+            const activeSearch = searchOverride ?? searchTextRef.current;
             const params = { page: pageNum, limit: 20 };
             if (activeFilters.category) params.category = activeFilters.category;
             if (activeFilters.paymentStatus) params.paymentStatus = activeFilters.paymentStatus;
@@ -46,7 +62,11 @@ function ExpenseManager() {
             if (activeFilters.to) params.to = activeFilters.to;
             if (activeSearch?.trim()) params.q = activeSearch.trim();
 
-            const res = await api.get(`/expense/solution-card/${solutionId}`, { params });
+            const res = await api.get(`/expense/solution-card/${solutionId}`, {
+                params,
+                signal: controller.signal,
+            });
+            if (controller.signal.aborted) return;
             const list = res.data.expenses || res.data.data || [];
             setExpenses((prev) => {
                 if (!append) return list;
@@ -66,22 +86,37 @@ function ExpenseManager() {
             setPage(nextPage);
             setAccessLevel(res.data.accessLevel || null);
         } catch (err) {
-            notifyError(err.response?.data?.error?.message || 'Failed to load expenses');
+            if (err.name === 'CanceledError' || err.code === 'ERR_CANCELED') return;
+            notifyErrorRef.current(err.response?.data?.error?.message || 'Failed to load expenses');
         } finally {
-            setLoading(false);
-            setLoadingMore(false);
+            if (!controller.signal.aborted) {
+                setLoading(false);
+                setLoadingMore(false);
+            }
         }
-    }, [solutionId, filters, searchText, notifyError]);
+    }, [solutionId]);
 
     const handleServerFilterChange = (nextFilters, nextSearch) => {
         if (nextFilters !== undefined) setFilters(nextFilters);
         if (nextSearch !== undefined) setSearchText(nextSearch);
         setPage(1);
-        fetchExpenses(1, {
-            append: false,
-            filterOverride: nextFilters ?? filters,
-            searchOverride: nextSearch ?? searchText,
-        });
+
+        const runFetch = () => {
+            fetchExpenses(1, {
+                append: false,
+                filterOverride: nextFilters ?? filtersRef.current,
+                searchOverride: nextSearch ?? searchTextRef.current,
+            });
+        };
+
+        const hasDateFilter =
+            (nextFilters ?? filtersRef.current)?.from || (nextFilters ?? filtersRef.current)?.to;
+        if (filterDebounceRef.current) clearTimeout(filterDebounceRef.current);
+        if (hasDateFilter) {
+            filterDebounceRef.current = setTimeout(runFetch, 400);
+        } else {
+            runFetch();
+        }
     };
 
     useEffect(() => {
@@ -89,18 +124,25 @@ function ExpenseManager() {
             setPage(1);
             fetchExpenses(1, { append: false });
         }
-    }, [solutionId]);
+        return () => {
+            if (abortRef.current) abortRef.current.abort();
+            if (filterDebounceRef.current) clearTimeout(filterDebounceRef.current);
+        };
+    }, [solutionId, fetchExpenses]);
+
+    const fetchRef = useRef(fetchExpenses);
+    fetchRef.current = fetchExpenses;
 
     useEffect(() => {
         const mq = window.matchMedia('(max-width: 767.98px)');
         const onChange = (e) => {
             if (!e.matches && solutionId) {
-                fetchExpenses(1, { append: false });
+                fetchRef.current(1, { append: false });
             }
         };
         mq.addEventListener('change', onChange);
         return () => mq.removeEventListener('change', onChange);
-    }, [solutionId, fetchExpenses]);
+    }, [solutionId]);
 
     const handleLoadMore = () => {
         if (loadingMore || !pagination.hasMore) return;
@@ -218,6 +260,27 @@ function ExpenseManager() {
         fetchExpenses(1, { append: false });
     };
 
+    const openAddPayment = async (expense) => {
+        try {
+            const res = await api.get(`/expense/${expense._id}`);
+            const full = res.data.expense;
+            if (!(full.pendingAmount > 0)) {
+                notifyError('This expense has no pending amount.');
+                return;
+            }
+            setPaymentModal({ show: true, expense: full });
+        } catch (err) {
+            notifyError(err.response?.data?.error?.message || 'Failed to load expense');
+        }
+    };
+
+    const closeAddPayment = () => setPaymentModal({ show: false, expense: null });
+
+    const handlePaymentSuccess = () => {
+        closeAddPayment();
+        fetchExpenses(1, { append: false });
+    };
+
     const handleDelete = async () => {
         const expense = deleteModal.expense;
         if (!expense) return;
@@ -244,6 +307,15 @@ function ExpenseManager() {
                 expense.payments?.some(
                     (p) => p.paymentMethod === 'upi' && p.upiScreenshotUrls?.length > 0
                 ),
+        },
+        {
+            btnTitle: 'Add Payment',
+            btnClass: 'btn btn-sm btn-outline-primary',
+            iconComponent: FaPlusCircle,
+            btnAction: openAddPayment,
+            isVisible: (expense) =>
+                (accessLevel === 'owner' || accessLevel === 'editor') &&
+                Number(expense.pendingAmount || 0) > 0,
         },
         {
             btnTitle: 'Edit',
@@ -375,12 +447,31 @@ function ExpenseManager() {
                         <Modal.Title>{editableExpense ? 'Edit Expense' : 'Add Expense'}</Modal.Title>
                     </Modal.Header>
                     <Modal.Body>
-                        <ExpenseForm
-                            expense={editableExpense}
-                            solutionCardId={solutionId}
-                            onSuccess={handleFormSuccess}
-                            onCancel={closeForm}
-                        />
+                        <Suspense fallback={<div className="p-3 text-muted">Loading form…</div>}>
+                            <ExpenseForm
+                                expense={editableExpense}
+                                solutionCardId={solutionId}
+                                onSuccess={handleFormSuccess}
+                                onCancel={closeForm}
+                            />
+                        </Suspense>
+                    </Modal.Body>
+                </Modal>
+            )}
+
+            {paymentModal.show && paymentModal.expense && (
+                <Modal show={paymentModal.show} onHide={closeAddPayment} centered fullscreen="sm-down">
+                    <Modal.Header closeButton>
+                        <Modal.Title>Add Payment</Modal.Title>
+                    </Modal.Header>
+                    <Modal.Body>
+                        <Suspense fallback={<div className="p-3 text-muted">Loading form…</div>}>
+                            <AddPaymentForm
+                                expense={paymentModal.expense}
+                                onSuccess={handlePaymentSuccess}
+                                onCancel={closeAddPayment}
+                            />
+                        </Suspense>
                     </Modal.Body>
                 </Modal>
             )}

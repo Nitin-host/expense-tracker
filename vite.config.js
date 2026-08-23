@@ -31,8 +31,8 @@ export default defineConfig(({ mode }) => {
                     ],
                 },
                 workbox: {
-                    globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,avif,woff2}'],
-                    maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
+                    globPatterns: ['**/*.{js,css,html,ico,svg,woff2}'],
+                    maximumFileSizeToCacheInBytes: 2 * 1024 * 1024,
                     navigateFallback: '/index.html',
                     navigateFallbackDenylist: [/^\/api/, /\/[^/?]+\.[^/]+$/],
                     runtimeCaching: [
@@ -73,6 +73,7 @@ export default defineConfig(({ mode }) => {
                         'vendor-react': ['react', 'react-dom', 'react-router-dom', 'react-redux', '@reduxjs/toolkit'],
                         'vendor-charts': ['apexcharts', 'react-apexcharts'],
                         'vendor-xlsx': ['xlsx'],
+                        'vendor-select': ['react-select'],
                     },
                 },
             },

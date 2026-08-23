@@ -129,39 +129,35 @@ export function SkeletonDashboard() {
     return (
         <div className="dashboard-page page-shell" aria-busy="true" aria-label="Loading dashboard">
             <SkeletonPageHeader actionCount={0} />
-            <SkeletonStatGrid count={3} />
-            <div className="row g-3">
-                <div className="col-12 col-lg-6">
-                    <div className="page-surface min-h-[280px]">
-                        <SkeletonPulse className="sk-line sk-line--label" style={{ width: 180 }} />
-                        <SkeletonPulse className="sk-chart mx-auto my-4" />
+            <div className="dashboard-stats dashboard-stats--primary">
+                {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="stat-tile stat-tile--compact">
+                        <SkeletonPulse className="sk-line sk-line--label mb-2" style={{ width: '55%' }} />
+                        <SkeletonPulse className="sk-line" style={{ width: '70%', height: '1.6rem' }} />
                     </div>
+                ))}
+            </div>
+            <div className="dashboard-body">
+                <div className="dashboard-charts">
+                    {Array.from({ length: 3 }).map((_, i) => (
+                        <div key={i} className="page-surface dashboard-chart-card">
+                            <SkeletonPulse className="sk-line sk-line--label mb-2" style={{ width: 140 }} />
+                            <SkeletonPulse className="sk-chart mx-auto my-2" />
+                        </div>
+                    ))}
                 </div>
-                <div className="col-12 col-lg-6">
-                    <div className="row g-3">
-                        <div className="col-12 col-md-6">
-                            <div className="page-surface h-100">
-                                <SkeletonPulse className="sk-line sk-line--label mb-3" style={{ width: 130 }} />
-                                {Array.from({ length: 3 }).map((_, i) => (
-                                    <div key={i} className="sk-recent-row">
-                                        <SkeletonPulse className="sk-line" style={{ width: '50%' }} />
-                                        <SkeletonPulse className="sk-line" style={{ width: '30%' }} />
-                                    </div>
-                                ))}
-                            </div>
+                <div className="dashboard-activity">
+                    {Array.from({ length: 2 }).map((_, i) => (
+                        <div key={i} className="page-surface dashboard-activity-card">
+                            <SkeletonPulse className="sk-line sk-line--label mb-3" style={{ width: 130 }} />
+                            {Array.from({ length: 3 }).map((__, j) => (
+                                <div key={j} className="sk-recent-row">
+                                    <SkeletonPulse className="sk-line" style={{ width: '50%' }} />
+                                    <SkeletonPulse className="sk-line" style={{ width: '30%' }} />
+                                </div>
+                            ))}
                         </div>
-                        <div className="col-12 col-md-6">
-                            <div className="page-surface h-100">
-                                <SkeletonPulse className="sk-line sk-line--label mb-3" style={{ width: 150 }} />
-                                {Array.from({ length: 3 }).map((_, i) => (
-                                    <div key={i} className="sk-recent-row">
-                                        <SkeletonPulse className="sk-line" style={{ width: '45%' }} />
-                                        <SkeletonPulse className="sk-line" style={{ width: '35%' }} />
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
+                    ))}
                 </div>
             </div>
         </div>
