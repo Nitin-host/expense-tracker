@@ -244,7 +244,24 @@ function TableUtil({
     const sentinelRef = useRef(null);
     const loadingMoreRef = useRef(loadingMore);
     const searchDebounceRef = useRef(null);
+    const filterValsRef = useRef(filterVals);
+    const searchTextRef = useRef(searchText);
     loadingMoreRef.current = loadingMore;
+    filterValsRef.current = filterVals;
+    searchTextRef.current = searchText;
+
+    const usesServerQuery = Boolean(serverPagination && onServerFilterChange);
+
+    const triggerServerQuery = useCallback(
+        (nextFilters, nextSearch) => {
+            if (!usesServerQuery) return;
+            onServerFilterChange(
+                nextFilters ?? filterValsRef.current,
+                nextSearch ?? searchTextRef.current
+            );
+        },
+        [usesServerQuery, onServerFilterChange]
+    );
 
     useEffect(() => {
         return () => {
@@ -290,44 +307,58 @@ function TableUtil({
         path.split('.').reduce((o, k) => (o ? o[k] : undefined), obj);
 
     const filteredData = useMemo(() => {
-        if (serverPagination) return [...tableData];
-
         let filtered = [...tableData];
 
-        if (searchText && searchKeys && searchKeys.length > 0) {
+        if (searchText && searchKeys && searchKeys.length > 0 && !usesServerQuery) {
             const s = searchText.toLowerCase();
             filtered = filtered.filter((item) =>
                 searchKeys.some((key) => {
                     const val = getNestedValueInTable(item, key);
-                    return val && val.toString().toLowerCase().includes(s);
+                    return val != null && String(val).toLowerCase().includes(s);
                 })
             );
         }
 
-        if (filterKeys && filterKeys.length > 0) {
-            Object.entries(filterVals).forEach(([key, values]) => {
-                if (values && values.length > 0) {
-                    filtered = filtered.filter((item) => {
-                        const val = getNestedValueInTable(item, key);
-                        return val && values.includes(String(val));
-                    });
-                }
+        if (filterKeys && filterKeys.length > 0 && !usesServerQuery) {
+            Object.entries(filterVals).forEach(([key, selected]) => {
+                if (selected == null || selected === '') return;
+                filtered = filtered.filter((item) => {
+                    const val = getNestedValueInTable(item, key);
+                    if (val == null) return false;
+                    if (Array.isArray(selected)) {
+                        return selected.length > 0 && selected.includes(String(val));
+                    }
+                    return String(val) === String(selected);
+                });
             });
+        }
+
+        if (usesServerQuery) {
+            return filtered;
         }
 
         const { index, asc } = sortConfig;
         const sortKey = tableHeader[index]?.key;
         if (sortKey) {
             filtered.sort((a, b) => {
-                const valA = getNestedValue(a, sortKey);
-                const valB = getNestedValue(b, sortKey);
+                const valA = getNestedValueInTable(a, sortKey);
+                const valB = getNestedValueInTable(b, sortKey);
                 if (valA === valB) return 0;
                 if (asc) return valA > valB ? 1 : -1;
                 return valA < valB ? 1 : -1;
             });
         }
         return filtered;
-    }, [tableData, filterVals, searchText, sortConfig, tableHeader, searchKeys, filterKeys, serverPagination]);
+    }, [
+        tableData,
+        filterVals,
+        searchText,
+        sortConfig,
+        tableHeader,
+        searchKeys,
+        filterKeys,
+        usesServerQuery,
+    ]);
 
     const totalPages = serverPagination
         ? serverPagination.totalPages || 1
@@ -461,7 +492,7 @@ function TableUtil({
                                 const val = typeof next === 'function' ? next(filterVals) : next;
                                 setFilterVals(val);
                                 setFilters(val);
-                                if (serverPagination && onServerFilterChange) onServerFilterChange(val);
+                                if (usesServerQuery) triggerServerQuery(val, searchTextRef.current);
                             }}
                         />
                     </div>
@@ -478,17 +509,17 @@ function TableUtil({
                                 const value = e.target.value;
                                 setSearchText(value);
                                 setCurrentPage(1);
-                                if (serverPagination && onServerFilterChange) {
+                                if (usesServerQuery) {
                                     if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
                                     searchDebounceRef.current = setTimeout(() => {
-                                        onServerFilterChange(filterVals, value);
+                                        triggerServerQuery(filterValsRef.current, value);
                                     }, 350);
                                 }
                             }}
                             onKeyDown={(e) => {
-                                if (e.key === 'Enter' && serverPagination && onServerFilterChange) {
+                                if (e.key === 'Enter' && usesServerQuery) {
                                     if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
-                                    onServerFilterChange(filterVals, e.target.value);
+                                    triggerServerQuery(filterValsRef.current, e.target.value);
                                 }
                             }}
                         />

@@ -104,12 +104,20 @@ function ExpenseManager() {
 
     const handleLoadMore = () => {
         if (loadingMore || !pagination.hasMore) return;
-        fetchExpenses(page + 1, { append: true });
+        fetchExpenses(page + 1, {
+            append: true,
+            filterOverride: filters,
+            searchOverride: searchText,
+        });
     };
 
     const handleDesktopPageChange = (pageNum) => {
         setPage(pageNum);
-        fetchExpenses(pageNum, { append: false });
+        fetchExpenses(pageNum, {
+            append: false,
+            filterOverride: filters,
+            searchOverride: searchText,
+        });
     };
 
     const openImageModal = async (expense) => {

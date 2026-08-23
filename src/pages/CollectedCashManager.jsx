@@ -28,6 +28,7 @@ function CollectedCashManager() {
     const [editableCash, setEditableCash] = useState(null);
 
     const [deleteModal, setDeleteModal] = useState({ show: false, collectedCash: null });
+    const [searchText, setSearchText] = useState('');
 
     const [formData, setFormData] = useState({
         name: '',
@@ -37,13 +38,15 @@ function CollectedCashManager() {
     const { notifySuccess, notifyError } = useAlert();
     const [accessLevel, setAccessLevel] = useState(null);
 
-    const fetchCollectedCash = useCallback(async (pageNum = 1, { append = false } = {}) => {
+    const fetchCollectedCash = useCallback(async (pageNum = 1, { append = false, searchOverride } = {}) => {
         if (append) setLoadingMore(true);
         else setLoading(true);
         try {
-            const res = await api.get(`/collected-cash/solution/${solutionId}`, {
-                params: { page: pageNum, limit: 20 },
-            });
+            const activeSearch = searchOverride ?? searchText;
+            const params = { page: pageNum, limit: 20 };
+            if (activeSearch?.trim()) params.q = activeSearch.trim();
+
+            const res = await api.get(`/collected-cash/solution/${solutionId}`, { params });
             const list = res.data.collectedCash || res.data.data || [];
             setCollectedCashList((prev) => {
                 if (!append) return list;
@@ -68,7 +71,16 @@ function CollectedCashManager() {
             setLoading(false);
             setLoadingMore(false);
         }
-    }, [solutionId]);
+    }, [solutionId, searchText, notifyError]);
+
+    const handleServerFilterChange = (_nextFilters, nextSearch) => {
+        if (nextSearch !== undefined) setSearchText(nextSearch);
+        setPage(1);
+        fetchCollectedCash(1, {
+            append: false,
+            searchOverride: nextSearch ?? searchText,
+        });
+    };
 
     useEffect(() => {
         if (solutionId) {
@@ -90,12 +102,12 @@ function CollectedCashManager() {
 
     const handleLoadMore = () => {
         if (loadingMore || !pagination.hasMore) return;
-        fetchCollectedCash(page + 1, { append: true });
+        fetchCollectedCash(page + 1, { append: true, searchOverride: searchText });
     };
 
     const handleDesktopPageChange = (pageNum) => {
         setPage(pageNum);
-        fetchCollectedCash(pageNum, { append: false });
+        fetchCollectedCash(pageNum, { append: false, searchOverride: searchText });
     };
 
     const openAddForm = () => {
@@ -242,7 +254,9 @@ function CollectedCashManager() {
                 tableHeader={tableHeader}
                 tableActions={actions}
                 searchKeys={['name']}
-                accessLevel={accessLevel}
+                searchText={searchText}
+                setSearchText={setSearchText}
+                onServerFilterChange={handleServerFilterChange}
                 serverPagination={pagination}
                 onPageChange={handleDesktopPageChange}
                 hasMore={pagination.hasMore}
@@ -251,13 +265,13 @@ function CollectedCashManager() {
             />
 
             <Modal show={showForm} onHide={closeForm} centered fullscreen="sm-down">
-                <Modal.Header closeButton>
-                    <Modal.Title>
-                        {editableCash ? 'Edit Collected Cash' : 'Add Collected Cash'}
-                    </Modal.Title>
-                </Modal.Header>
-                <Modal.Body>
-                    <Form onSubmit={handleFormSubmit}>
+                <Form onSubmit={handleFormSubmit}>
+                    <Modal.Header closeButton>
+                        <Modal.Title>
+                            {editableCash ? 'Edit Collected Cash' : 'Add Collected Cash'}
+                        </Modal.Title>
+                    </Modal.Header>
+                    <Modal.Body>
                         <Form.Group className="mb-3" controlId="collectedCashName">
                             <Form.Label>Name</Form.Label>
                             <Form.Control
@@ -271,7 +285,7 @@ function CollectedCashManager() {
                             />
                         </Form.Group>
 
-                        <Form.Group className="mb-3" controlId="collectedCashAmount">
+                        <Form.Group className="mb-0" controlId="collectedCashAmount">
                             <Form.Label>Amount</Form.Label>
                             <Form.Control
                                 type="text"
@@ -284,17 +298,16 @@ function CollectedCashManager() {
                                 autoComplete="off"
                             />
                         </Form.Group>
-
-                        <div className="d-flex justify-content-end gap-2">
-                            <Button variant="secondary" onClick={closeForm}>
-                                Cancel
-                            </Button>
-                            <Button type="submit" variant="primary">
-                                {editableCash ? 'Update' : 'Add'}
-                            </Button>
-                        </div>
-                    </Form>
-                </Modal.Body>
+                    </Modal.Body>
+                    <Modal.Footer>
+                        <Button variant="secondary" type="button" onClick={closeForm}>
+                            Cancel
+                        </Button>
+                        <Button type="submit" variant="primary">
+                            {editableCash ? 'Update' : 'Add'}
+                        </Button>
+                    </Modal.Footer>
+                </Form>
             </Modal>
 
             <Modal
