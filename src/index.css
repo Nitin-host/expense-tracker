@@ -1822,11 +1822,11 @@ input[type="number"] {
 }
 
 @media (max-width: 767.98px) {
-    .page-shell .page-header .d-flex.flex-wrap.gap-2 {
+    .page-shell .page-header .report-export-bar {
         width: 100%;
     }
 
-    .page-shell .page-header .d-flex.flex-wrap.gap-2 .btn {
+    .page-shell .page-header .report-export-bar .btn {
         flex: 1 1 calc(50% - 0.25rem);
         min-width: 0;
         font-size: 0.78rem;
@@ -1840,6 +1840,92 @@ input[type="number"] {
     .page-shell .stat-tile .stat-value {
         font-size: 1.35rem;
     }
+}
+
+/* Full-screen print/PDF preview (iOS Safari needs visible iframe + user tap) */
+body.et-print-preview-open {
+    overflow: hidden;
+}
+
+.et-print-preview {
+    position: fixed;
+    inset: 0;
+    z-index: 12000;
+    display: flex;
+    flex-direction: column;
+    background: var(--surface, #fff);
+    color: var(--table-text, #0f172a);
+}
+
+.et-print-preview__toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--et-border, #e2e8f0);
+    background: var(--surface, #fff);
+    flex-shrink: 0;
+}
+
+.et-print-preview__title {
+    font-size: 0.95rem;
+    font-weight: 650;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.et-print-preview__actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+.et-print-preview__print,
+.et-print-preview__close {
+    appearance: none;
+    border-radius: 999px;
+    padding: 0.45rem 0.9rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid transparent;
+}
+
+.et-print-preview__print {
+    background: #0f766e;
+    color: #fff;
+    border-color: #0f766e;
+}
+
+.et-print-preview__close {
+    background: transparent;
+    color: var(--table-text, #0f172a);
+    border-color: var(--et-border, #cbd5e1);
+}
+
+.et-print-preview__hint {
+    margin: 0;
+    padding: 0.5rem 1rem;
+    font-size: 0.8rem;
+    color: var(--et-muted, #64748b);
+    background: color-mix(in srgb, #0f766e 6%, var(--surface, #fff));
+    border-bottom: 1px solid var(--et-border, #e2e8f0);
+    flex-shrink: 0;
+}
+
+.et-print-preview__frame {
+    flex: 1;
+    width: 100%;
+    border: none;
+    background: #fff;
+}
+
+body[data-theme="dark"] .et-print-preview__frame {
+    background: #fff;
 }
 
 .pagination .page-link {

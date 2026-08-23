@@ -3,6 +3,132 @@ import { formatDate } from './formatDate';
 const CURRENCY = 'INR';
 const LOCALE = 'en-IN';
 
+/** iPhone, iPad, and iPadOS desktop UA */
+export function isIOSDevice() {
+    if (typeof navigator === 'undefined') return false;
+    return (
+        /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+    );
+}
+
+export function isMobileDevice() {
+    if (typeof navigator === 'undefined') return false;
+    return isIOSDevice() || /Android/i.test(navigator.userAgent);
+}
+
+/**
+ * Save a blob as a file. Uses Web Share on iOS when available; otherwise download / open tab.
+ * @returns {Promise<{ method: 'share' | 'download' | 'open' | 'cancelled' }>}
+ */
+async function saveBlobFile(blob, filename) {
+    const name = filename || 'download';
+    const file = new File([blob], name, { type: blob.type || 'application/octet-stream' });
+
+    if (navigator.share && typeof navigator.canShare === 'function') {
+        try {
+            if (navigator.canShare({ files: [file] })) {
+                await navigator.share({ files: [file], title: name });
+                return { method: 'share' };
+            }
+        } catch (err) {
+            if (err?.name === 'AbortError') return { method: 'cancelled' };
+        }
+    }
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.rel = 'noopener';
+    link.style.display = 'none';
+
+    if (isIOSDevice()) {
+        link.target = '_blank';
+    } else {
+        link.download = name;
+    }
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(url), isIOSDevice() ? 120000 : 2000);
+
+    return { method: isIOSDevice() ? 'open' : 'download' };
+}
+
+function showPrintPreview(html, title = 'Report') {
+    document.querySelector('.et-print-preview')?.remove();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'et-print-preview';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-label', title);
+
+    const toolbar = document.createElement('div');
+    toolbar.className = 'et-print-preview__toolbar';
+
+    const titleEl = document.createElement('strong');
+    titleEl.className = 'et-print-preview__title';
+    titleEl.textContent = title;
+
+    const actions = document.createElement('div');
+    actions.className = 'et-print-preview__actions';
+
+    const printBtn = document.createElement('button');
+    printBtn.type = 'button';
+    printBtn.className = 'et-print-preview__print';
+    printBtn.textContent = isIOSDevice() ? 'Save as PDF' : 'Print / Save PDF';
+
+    const closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.className = 'et-print-preview__close';
+    closeBtn.textContent = 'Close';
+
+    actions.append(printBtn, closeBtn);
+    toolbar.append(titleEl, actions);
+
+    const hint = document.createElement('p');
+    hint.className = 'et-print-preview__hint';
+    hint.textContent = isIOSDevice()
+        ? 'Tap Save as PDF, then use the share icon to save to Files or send the PDF.'
+        : 'Choose Print, then pick Save as PDF or your printer.';
+
+    const iframe = document.createElement('iframe');
+    iframe.className = 'et-print-preview__frame';
+    iframe.title = title;
+
+    overlay.append(toolbar, hint, iframe);
+    document.body.appendChild(overlay);
+    document.body.classList.add('et-print-preview-open');
+
+    const cleanup = () => {
+        overlay.remove();
+        document.body.classList.remove('et-print-preview-open');
+    };
+
+    closeBtn.addEventListener('click', cleanup);
+
+    const doc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (doc) {
+        doc.open();
+        doc.write(html);
+        doc.close();
+    }
+
+    printBtn.addEventListener('click', () => {
+        try {
+            iframe.contentWindow?.focus();
+            iframe.contentWindow?.print();
+        } catch {
+            const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+            saveBlobFile(blob, `${title.replace(/[^\w\s-]/g, '').trim() || 'report'}.html`);
+        }
+    });
+
+    return { method: 'preview' };
+}
+
 async function loadXlsx() {
     return import('xlsx');
 }
@@ -404,11 +530,15 @@ export async function downloadExcel(filename, payload) {
     XLSX.utils.book_append_sheet(wb, ws, sheetNameFromType(normalized.document.type));
 
     const name = filename.endsWith('.xlsx') ? filename : `${filename}.xlsx`;
-    XLSX.writeFile(wb, name, { bookType: 'xlsx', compression: true });
+    const buffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array', compression: true });
+    const blob = new Blob([buffer], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    return saveBlobFile(blob, name);
 }
 
 /** Structured CSV fallback */
-export function downloadCsv(filename, payload) {
+export async function downloadCsv(filename, payload) {
     const { document: doc, sections } = normalizeExportPayload(payload);
     const lines = [
         doc.title,
@@ -445,39 +575,16 @@ export function downloadCsv(filename, payload) {
     });
 
     const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename.endsWith('.csv') ? filename : `${filename}.csv`;
-    a.style.display = 'none';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    const name = filename.endsWith('.csv') ? filename : `${filename}.csv`;
+    return saveBlobFile(blob, name);
 }
 
-/** Open printable PDF view */
+/** Open printable PDF view (visible preview so iOS Safari can print on user tap) */
 export function printAsPdf(payload) {
-    const html = buildPdfHtml(normalizeExportPayload(payload));
-
-    const iframe = document.createElement('iframe');
-    iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:none';
-    document.body.appendChild(iframe);
-
-    const doc = iframe.contentWindow.document;
-    doc.open();
-    doc.write(html);
-    doc.close();
-
-    const printFrame = () => {
-        iframe.contentWindow.focus();
-        iframe.contentWindow.print();
-        setTimeout(() => {
-            if (iframe.parentNode) document.body.removeChild(iframe);
-        }, 1500);
-    };
-
-    setTimeout(printFrame, 200);
+    const normalized = normalizeExportPayload(payload);
+    const html = buildPdfHtml(normalized);
+    const title = normalized.document?.title || 'Report';
+    return showPrintPreview(html, title);
 }
 
 export async function fetchAndExport(api, solutionId, type, format = 'excel', extraParams = {}) {
@@ -500,8 +607,7 @@ export async function fetchAndExport(api, solutionId, type, format = 'excel', ex
     const baseName = `${slug}-${type}-${date}`;
 
     if (format === 'pdf') {
-        printAsPdf(payload);
-    } else {
-        await downloadExcel(baseName, payload);
+        return printAsPdf(payload);
     }
+    return downloadExcel(baseName, payload);
 }

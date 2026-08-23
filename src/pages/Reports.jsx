@@ -3,7 +3,7 @@ import { Container, Button, Form, Row, Col, Table, Alert } from '../components/u
 import { useParams } from 'react-router-dom';
 import api from '../api/http';
 import { useAlert } from '../context/alertContext';
-import { fetchAndExport } from '../utils/export';
+import { fetchAndExport, isIOSDevice } from '../utils/export';
 import { SkeletonReportsPage } from '../components/Skeleton';
 
 const MOBILE_MQ = '(max-width: 767.98px)';
@@ -92,9 +92,10 @@ function MonthlyTrendMobileList({ items }) {
 
 export default function Reports() {
     const { id: solutionId } = useParams();
-    const { notifyError } = useAlert();
+    const { notifyError, notifySuccess } = useAlert();
     const mobileView = useMobileView();
     const [loading, setLoading] = useState(true);
+    const [exporting, setExporting] = useState(null);
     const [data, setData] = useState(null);
     const [error, setError] = useState('');
     const currentYear = new Date().getFullYear();
@@ -120,13 +121,46 @@ export default function Reports() {
     };
 
     const handleExport = async (type, format) => {
+        const key = `${type}-${format}`;
+        setExporting(key);
         try {
             const params = { year };
             if (month) params.month = month;
-            await fetchAndExport(api, solutionId, type, format, params);
+            const result = await fetchAndExport(api, solutionId, type, format, params);
+
+            if (result?.method === 'cancelled') return;
+
+            if (format === 'pdf' || result?.method === 'preview') {
+                notifySuccess(
+                    isIOSDevice()
+                        ? 'Report opened — tap Save as PDF, then share to Files.'
+                        : 'Report opened — use Print / Save PDF.'
+                );
+            } else if (result?.method === 'share') {
+                notifySuccess('Export shared successfully.');
+            } else if (isIOSDevice() && format === 'excel') {
+                notifySuccess('Use the Share sheet to save the Excel file to Files.');
+            }
         } catch (err) {
             notifyError(err.response?.data?.error?.message || err.message || 'Export failed');
+        } finally {
+            setExporting(null);
         }
+    };
+
+    const exportBtn = (type, format, label) => {
+        const key = `${type}-${format}`;
+        const busy = exporting === key;
+        return (
+            <Button
+                variant="outline-primary"
+                size="sm"
+                disabled={Boolean(exporting)}
+                onClick={() => handleExport(type, format)}
+            >
+                {busy ? 'Exporting…' : label}
+            </Button>
+        );
     };
 
     useEffect(() => {
@@ -143,42 +177,12 @@ export default function Reports() {
                     <h1 className="page-heading">Reports</h1>
                     <p className="page-sub">Month/year breakdown and who paid what.</p>
                 </div>
-                <div className="d-flex flex-wrap gap-2">
-                    <Button
-                        variant="outline-primary"
-                        size="sm"
-                        onClick={() => handleExport('summary', 'excel')}
-                    >
-                        Summary Excel
-                    </Button>
-                    <Button
-                        variant="outline-primary"
-                        size="sm"
-                        onClick={() => handleExport('summary', 'pdf')}
-                    >
-                        Summary PDF
-                    </Button>
-                    <Button
-                        variant="outline-primary"
-                        size="sm"
-                        onClick={() => handleExport('expenses', 'excel')}
-                    >
-                        Expenses Excel
-                    </Button>
-                    <Button
-                        variant="outline-primary"
-                        size="sm"
-                        onClick={() => handleExport('expenses', 'pdf')}
-                    >
-                        Expenses PDF
-                    </Button>
-                    <Button
-                        variant="outline-primary"
-                        size="sm"
-                        onClick={() => handleExport('collected-cash', 'excel')}
-                    >
-                        Cash Excel
-                    </Button>
+                <div className="report-export-bar d-flex flex-wrap gap-2">
+                    {exportBtn('summary', 'excel', 'Summary Excel')}
+                    {exportBtn('summary', 'pdf', 'Summary PDF')}
+                    {exportBtn('expenses', 'excel', 'Expenses Excel')}
+                    {exportBtn('expenses', 'pdf', 'Expenses PDF')}
+                    {exportBtn('collected-cash', 'excel', 'Cash Excel')}
                 </div>
             </div>
 
