@@ -28,9 +28,11 @@ function ExpenseManager() {
     const [filters, setFilters] = useState({});
     const [searchText, setSearchText] = useState('');
 
-    const [showImageModal, setShowImageModal] = useState(false);
-    const [modalImages, setModalImages] = useState([]);
-    const [modalTitle, setModalTitle] = useState('');
+    const [historyModal, setHistoryModal] = useState({
+        show: false,
+        loading: false,
+        expense: null,
+    });
     const [deleteModal, setDeleteModal] = useState({ show: false, expense: null });
 
     const { notifySuccess, notifyError } = useAlert();
@@ -162,33 +164,41 @@ function ExpenseManager() {
         });
     };
 
-    const openImageModal = async (expense) => {
+    const openHistoryModal = async (expense) => {
+        setHistoryModal({ show: true, loading: true, expense });
         try {
-            let urls = [];
-            if (expense.hasScreenshots || expense.screenshotCount > 0) {
-                const res = await api.get(`/expense/${expense._id}`);
-                const full = res.data.expense;
-                urls = (full.payments || []).flatMap((p) =>
-                    p.paymentMethod === 'upi' && p.upiScreenshotUrls ? p.upiScreenshotUrls : []
-                );
-            } else if (expense.payments) {
-                urls = expense.payments.flatMap((p) =>
-                    p.paymentMethod === 'upi' && p.upiScreenshotUrls ? p.upiScreenshotUrls : []
-                );
-            }
-            if (!urls.length) {
-                notifyError('No screenshots available for this expense');
-                return;
-            }
-            setModalImages(urls);
-            setModalTitle(expense.name);
-            setShowImageModal(true);
+            const res = await api.get(`/expense/${expense._id}`);
+            setHistoryModal({ show: true, loading: false, expense: res.data.expense });
         } catch (err) {
-            notifyError(err.response?.data?.error?.message || 'Failed to load screenshots');
+            setHistoryModal({ show: false, loading: false, expense: null });
+            notifyError(err.response?.data?.error?.message || 'Failed to load payment history');
         }
     };
 
-    const closeImageModal = () => setShowImageModal(false);
+    const closeHistoryModal = () =>
+        setHistoryModal({ show: false, loading: false, expense: null });
+
+    const formatMoney = (value) => `₹${Number(value || 0).toFixed(2)}`;
+
+    const formatPaymentBreakdown = (expense) => {
+        const history = expense.paymentHistory;
+        if (Array.isArray(history) && history.length > 0) {
+            return history
+                .map(
+                    (p) =>
+                        `${formatMoney(p.paidAmount)} ${String(p.paymentMethod || 'cash').toUpperCase()}`
+                )
+                .join(' · ');
+        }
+        const methods = expense.paymentMethods || expense.payments || [];
+        if (Array.isArray(methods) && methods.length) {
+            const labels = methods.map((m) =>
+                String(typeof m === 'string' ? m : m.paymentMethod || 'cash').toUpperCase()
+            );
+            return [...new Set(labels)].join(', ');
+        }
+        return '—';
+    };
 
     const categories = Array.from(new Set(expenses.map((e) => e.category).filter(Boolean))).map(
         (cat) => ({ label: cat, value: cat })
@@ -264,8 +274,17 @@ function ExpenseManager() {
         try {
             const res = await api.get(`/expense/${expense._id}`);
             const full = res.data.expense;
-            if (!(full.pendingAmount > 0)) {
-                notifyError('This expense has no pending amount.');
+            const amount = Number(full.amount) || 0;
+            const paid = Number(full.advancePaid) || 0;
+            const pending =
+                full.pendingAmount != null ? Number(full.pendingAmount) : amount - paid;
+            if (
+                full.paymentStatus === 'fully_paid' ||
+                !(pending > 0.005) ||
+                paid + 0.005 >= amount
+            ) {
+                notifyError('This expense is fully paid. No pending amount left.');
+                fetchExpenses(1, { append: false });
                 return;
             }
             setPaymentModal({ show: true, expense: full });
@@ -297,25 +316,29 @@ function ExpenseManager() {
 
     const actions = [
         {
-            btnTitle: 'View',
+            btnTitle: 'History',
             btnClass: 'btn btn-sm btn-outline-info',
             iconComponent: FaEye,
-            btnAction: openImageModal,
-            isVisible: (expense) =>
-                expense.hasScreenshots ||
-                expense.screenshotCount > 0 ||
-                expense.payments?.some(
-                    (p) => p.paymentMethod === 'upi' && p.upiScreenshotUrls?.length > 0
-                ),
+            btnAction: openHistoryModal,
+            isVisible: () => true,
         },
         {
             btnTitle: 'Add Payment',
             btnClass: 'btn btn-sm btn-outline-primary',
             iconComponent: FaPlusCircle,
             btnAction: openAddPayment,
-            isVisible: (expense) =>
-                (accessLevel === 'owner' || accessLevel === 'editor') &&
-                Number(expense.pendingAmount || 0) > 0,
+            isVisible: (expense) => {
+                if (!(accessLevel === 'owner' || accessLevel === 'editor')) return false;
+                // Hide when bill is fully paid (amount matches paid)
+                if (expense.paymentStatus === 'fully_paid') return false;
+                const amount = Number(expense.amount) || 0;
+                const paid = Number(expense.advancePaid) || 0;
+                const pending =
+                    expense.pendingAmount != null
+                        ? Number(expense.pendingAmount)
+                        : amount - paid;
+                return pending > 0.005 && paid + 0.005 < amount;
+            },
         },
         {
             btnTitle: 'Edit',
@@ -370,7 +393,12 @@ function ExpenseManager() {
             ),
         },
         { label: 'Paid by', key: 'paidBy.name' },
-        { label: 'Payment', key: 'payments.paymentMethod' },
+        {
+            label: 'Payment',
+            key: 'paymentHistory',
+            mobileBadge: true,
+            render: (_value, row) => formatPaymentBreakdown(row),
+        },
         { label: 'Date', key: 'createdAt', dataFormat: 'date', mobileDate: true },
     ];
 
@@ -420,24 +448,109 @@ function ExpenseManager() {
             />
 
             <Modal
-                show={showImageModal}
-                onHide={closeImageModal}
+                show={historyModal.show}
+                onHide={closeHistoryModal}
                 size="lg"
                 centered
                 fullscreen="sm-down"
             >
                 <Modal.Header closeButton>
-                    <Modal.Title>Payment Screenshot — {modalTitle}</Modal.Title>
+                    <Modal.Title>
+                        Payment history
+                        {historyModal.expense?.name ? ` — ${historyModal.expense.name}` : ''}
+                    </Modal.Title>
                 </Modal.Header>
-                <Modal.Body className="d-flex flex-wrap gap-3 justify-content-center">
-                    {modalImages.map((url, index) => (
-                        <img
-                            key={index}
-                            src={url}
-                            alt={`Screenshot ${index + 1}`}
-                            style={{ maxHeight: '400px', maxWidth: '100%', borderRadius: '10px' }}
-                        />
-                    ))}
+                <Modal.Body>
+                    {historyModal.loading && (
+                        <p className="text-muted mb-0">Loading payment history…</p>
+                    )}
+                    {!historyModal.loading && historyModal.expense && (
+                        <div className="et-payment-history">
+                            <div className="et-payment-history__summary">
+                                <div>
+                                    <span className="et-payment-history__label">Bill</span>
+                                    <strong>{formatMoney(historyModal.expense.amount)}</strong>
+                                </div>
+                                <div>
+                                    <span className="et-payment-history__label">Paid</span>
+                                    <strong className="et-payment-history__paid">
+                                        {formatMoney(historyModal.expense.advancePaid)}
+                                    </strong>
+                                </div>
+                                <div>
+                                    <span className="et-payment-history__label">Pending</span>
+                                    <strong
+                                        className={
+                                            Number(historyModal.expense.pendingAmount) > 0
+                                                ? 'et-payment-history__pending'
+                                                : ''
+                                        }
+                                    >
+                                        {formatMoney(historyModal.expense.pendingAmount)}
+                                    </strong>
+                                </div>
+                            </div>
+
+                            <ol className="et-payment-history__list">
+                                {(historyModal.expense.payments || []).map((payment, index) => {
+                                    const method = String(
+                                        payment.paymentMethod || 'cash'
+                                    ).toUpperCase();
+                                    const shots =
+                                        payment.paymentMethod === 'upi'
+                                            ? payment.upiScreenshotUrls || []
+                                            : [];
+                                    return (
+                                        <li
+                                            key={`${payment.paidAt || index}-${payment.paidAmount}-${method}`}
+                                            className="et-payment-history__item"
+                                        >
+                                            <div className="et-payment-history__item-top">
+                                                <span className="et-payment-history__step">
+                                                    Payment {index + 1}
+                                                </span>
+                                                <time>
+                                                    {formatDate(payment.paidAt || historyModal.expense.createdAt)}
+                                                </time>
+                                            </div>
+                                            <div className="et-payment-history__item-main">
+                                                <strong>{formatMoney(payment.paidAmount)}</strong>
+                                                <span
+                                                    className={`et-payment-history__method et-payment-history__method--${method.toLowerCase()}`}
+                                                >
+                                                    {method}
+                                                </span>
+                                            </div>
+                                            {shots.length > 0 && (
+                                                <div className="et-payment-history__shots">
+                                                    {shots.map((url, shotIdx) => (
+                                                        <a
+                                                            key={`${url}-${shotIdx}`}
+                                                            href={url}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="et-payment-history__shot"
+                                                        >
+                                                            <img
+                                                                src={url}
+                                                                alt={`UPI screenshot ${index + 1}.${shotIdx + 1}`}
+                                                                loading="lazy"
+                                                            />
+                                                        </a>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </li>
+                                    );
+                                })}
+                            </ol>
+
+                            {(!historyModal.expense.payments ||
+                                historyModal.expense.payments.length === 0) && (
+                                <p className="text-muted mb-0">No payments recorded yet.</p>
+                            )}
+                        </div>
+                    )}
                 </Modal.Body>
             </Modal>
 

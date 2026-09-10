@@ -14,7 +14,13 @@ function ExpenseForm({ expense, solutionCardId, onSuccess, onCancel }) {
     const [existingScreenshots, setExistingScreenshots] = useState([]);
     const [loading, setLoading] = useState(false);
 
-    const { notifySuccess, notifyError } = useAlert();
+    const { notifyError } = useAlert();
+    const hasPaymentHistory = Boolean(expense?.payments?.length > 1);
+    const totalPaid = Number(
+        expense?.payments?.reduce((sum, p) => sum + (p.paidAmount || 0), 0) ||
+            expense?.advancePaid ||
+            0
+    );
 
     const previewUrls = useMemo(
         () => upiScreenshots.map((file) => URL.createObjectURL(file)),
@@ -85,7 +91,30 @@ function ExpenseForm({ expense, solutionCardId, onSuccess, onCancel }) {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        if (paymentMethod === 'upi') {
+        const billAmount = Number(amount);
+        const paid = hasPaymentHistory ? totalPaid : Number(paidAmount);
+
+        if (!(billAmount > 0)) {
+            notifyError('Bill amount must be greater than 0.');
+            return;
+        }
+        if (Number.isNaN(paid) || paid < 0) {
+            notifyError('Enter a valid paid amount.');
+            return;
+        }
+        if (paid > billAmount) {
+            notifyError('Paid amount cannot be greater than total amount.');
+            return;
+        }
+        if (hasPaymentHistory && totalPaid > billAmount) {
+            notifyError(
+                `Bill amount cannot be less than already paid ₹${totalPaid.toFixed(2)}. Use Add Payment only for new installments.`
+            );
+            return;
+        }
+
+        const payingNow = paid > 0;
+        if (payingNow && !hasPaymentHistory && paymentMethod === 'upi') {
             if (upiScreenshots.length === 0 && existingScreenshots.length === 0) {
                 notifyError('Please upload at least one UPI screenshot.');
                 return;
@@ -95,30 +124,60 @@ function ExpenseForm({ expense, solutionCardId, onSuccess, onCancel }) {
         setLoading(true);
         try {
             const formData = new FormData();
-            formData.append('name', name);
-            formData.append('category', category);
-            formData.append('amount', amount);
-            formData.append('paymentMethod', paymentMethod);
-            formData.append('paidAmount', paidAmount);
+            formData.append('name', name.trim());
+            formData.append('category', category.trim());
+            formData.append('amount', String(billAmount));
             formData.append('solutionCard', solutionCardId);
 
-            const payments = [
-                {
-                    paidAmount: Number(paidAmount),
-                    paymentMethod,
-                    upiScreenshotUrls: existingScreenshots,
-                },
-            ];
-            formData.append('payments', JSON.stringify(payments));
+            // Multi-payment expenses: keep installment history; only update bill fields.
+            // Use Add Payment for new cash/UPI installments.
+            if (hasPaymentHistory) {
+                formData.append('paidAmount', String(totalPaid));
+                formData.append('paymentMethod', expense.payments[0]?.paymentMethod || 'cash');
+                formData.append(
+                    'payments',
+                    JSON.stringify(
+                        expense.payments.map((p) => ({
+                            paidAmount: Number(p.paidAmount) || 0,
+                            paymentMethod: p.paymentMethod || 'cash',
+                            paidAt: p.paidAt,
+                            upiScreenshotUrls: p.upiScreenshotUrls || [],
+                        }))
+                    )
+                );
+                formData.append(
+                    'existingScreenshots',
+                    JSON.stringify(
+                        (expense.payments || []).flatMap((p) => p.upiScreenshotUrls || [])
+                    )
+                );
+            } else {
+                const method = payingNow ? paymentMethod : 'cash';
+                formData.append('paymentMethod', method);
+                formData.append('paidAmount', String(paid));
+                // Always send payments array (including []) so update can clear installments.
+                const payments =
+                    payingNow
+                        ? [
+                              {
+                                  paidAmount: paid,
+                                  paymentMethod: method,
+                                  upiScreenshotUrls: existingScreenshots,
+                              },
+                          ]
+                        : [];
+                formData.append('payments', JSON.stringify(payments));
+                if (expense) {
+                    formData.append('existingScreenshots', JSON.stringify(existingScreenshots));
+                }
+                if (payingNow && method === 'upi') {
+                    upiScreenshots.forEach((file) => formData.append('upiScreenshots', file));
+                }
+            }
 
             if (expense) {
                 formData.append('expenseId', expense._id);
-                formData.append('existingScreenshots', JSON.stringify(existingScreenshots));
             }
-
-            upiScreenshots.forEach((file) =>
-                formData.append('upiScreenshots', file)
-            );
 
             let res;
             if (expense) {
@@ -132,7 +191,6 @@ function ExpenseForm({ expense, solutionCardId, onSuccess, onCancel }) {
             }
 
             resetForm();
-            notifySuccess(expense ? 'Expense updated successfully!' : 'Expense added successfully!');
             if (onSuccess) onSuccess(res.data.expense);
         } catch (err) {
             const message =
@@ -194,92 +252,121 @@ function ExpenseForm({ expense, solutionCardId, onSuccess, onCancel }) {
                         id="paidAmount"
                         type="text"
                         inputMode="decimal"
-                        value={paidAmount}
+                        value={hasPaymentHistory ? String(totalPaid) : paidAmount}
                         onChange={(e) => setPaidAmount(sanitizeDecimalInput(e.target.value))}
                         placeholder="Enter amount paid now"
-                        required
+                        required={!hasPaymentHistory}
+                        disabled={hasPaymentHistory}
                         autoComplete="off"
                     />
                 </Form.Group>
             </Row>
 
-            <Form.Group controlId="paymentMethod">
-                <Form.Label htmlFor="paymentMethod">Payment Method</Form.Label>
-                <Form.Select
-                    id="paymentMethod"
-                    value={paymentMethod}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
-                    required
-                >
-                    <option value="cash">Cash</option>
-                    <option value="upi">UPI</option>
-                </Form.Select>
-            </Form.Group>
+            {hasPaymentHistory && (
+                <div className="et-payment-history-note" role="note">
+                    <p>
+                        This expense already has <strong>{expense.payments.length} payments</strong>.
+                        Edit keeps that history. Use <strong>Add Payment</strong> for the next cash/UPI
+                        installment, and <strong>History</strong> to review the breakdown.
+                    </p>
+                    <ul>
+                        {expense.payments.map((p, idx) => (
+                            <li key={`${p.paidAt || idx}-${p.paidAmount}`}>
+                                Payment {idx + 1}: ₹{Number(p.paidAmount || 0).toFixed(2)}{' '}
+                                {String(p.paymentMethod || 'cash').toUpperCase()}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
 
-            {paymentMethod === 'upi' && (
+            {!hasPaymentHistory && (
                 <>
-                    <Form.Group controlId="upiScreenshotsUpload">
-                        <Form.Label htmlFor="upiScreenshotsUpload">
-                            UPI Screenshots (you can add more)
-                        </Form.Label>
-                        <Form.Control
-                            id="upiScreenshotsUpload"
-                            type="file"
-                            accept="image/*"
-                            multiple
-                            title="Choose UPI screenshot images"
-                            onChange={handleFileChange}
-                            required={
-                                upiScreenshots.length === 0 &&
-                                existingScreenshots.length === 0
-                            }
-                        />
+                    <Form.Group controlId="paymentMethod">
+                        <Form.Label htmlFor="paymentMethod">Payment Method</Form.Label>
+                        <Form.Select
+                            id="paymentMethod"
+                            value={paymentMethod}
+                            onChange={(e) => setPaymentMethod(e.target.value)}
+                            required={Number(paidAmount) > 0}
+                            disabled={!(Number(paidAmount) > 0)}
+                        >
+                            <option value="cash">Cash</option>
+                            <option value="upi">UPI</option>
+                        </Form.Select>
+                        {!(Number(paidAmount) > 0) && (
+                            <p className="mt-1 mb-0 text-sm text-muted">
+                                Set paid amount above 0 to choose Cash/UPI, or use Add Payment later.
+                            </p>
+                        )}
                     </Form.Group>
 
-                    {!!existingScreenshots.length && (
-                        <div className="et-form-gallery">
-                            <Form.Label>Existing Screenshots</Form.Label>
-                            <div className="et-form-gallery__grid">
-                                {existingScreenshots.map((url, idx) => (
-                                    <div key={idx} className="et-form-gallery__item">
-                                        <img
-                                            src={url}
-                                            alt={`Existing UPI Screenshot ${idx + 1}`}
-                                        />
-                                        <CloseButton
-                                            className="et-form-gallery__remove"
-                                            onClick={() => removeExistingImage(idx)}
-                                            aria-label="Remove existing screenshot"
-                                        />
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
+                    {Number(paidAmount) > 0 && paymentMethod === 'upi' && (
+                        <>
+                            <Form.Group controlId="upiScreenshotsUpload">
+                                <Form.Label htmlFor="upiScreenshotsUpload">
+                                    UPI Screenshots (you can add more)
+                                </Form.Label>
+                                <Form.Control
+                                    id="upiScreenshotsUpload"
+                                    type="file"
+                                    accept="image/*"
+                                    multiple
+                                    title="Choose UPI screenshot images"
+                                    onChange={handleFileChange}
+                                    required={
+                                        upiScreenshots.length === 0 &&
+                                        existingScreenshots.length === 0
+                                    }
+                                />
+                            </Form.Group>
 
-                    {!!upiScreenshots.length && (
-                        <div className="et-form-gallery">
-                            <Form.Label>New Screenshots</Form.Label>
-                            <div className="et-form-gallery__grid">
-                                {upiScreenshots.map((file, idx) => (
-                                    <div
-                                        key={`${file.name}-${file.lastModified}-${idx}`}
-                                        className="et-form-gallery__item"
-                                    >
-                                        <img
-                                            src={previewUrls[idx]}
-                                            alt={`UPI Screenshot ${idx + 1}`}
-                                            loading="lazy"
-                                        />
-                                        <CloseButton
-                                            className="et-form-gallery__remove"
-                                            onClick={() => removeNewImage(idx)}
-                                            aria-label="Remove new screenshot"
-                                        />
+                            {!!existingScreenshots.length && (
+                                <div className="et-form-gallery">
+                                    <Form.Label>Existing Screenshots</Form.Label>
+                                    <div className="et-form-gallery__grid">
+                                        {existingScreenshots.map((url, idx) => (
+                                            <div key={idx} className="et-form-gallery__item">
+                                                <img
+                                                    src={url}
+                                                    alt={`Existing UPI Screenshot ${idx + 1}`}
+                                                />
+                                                <CloseButton
+                                                    className="et-form-gallery__remove"
+                                                    onClick={() => removeExistingImage(idx)}
+                                                    aria-label="Remove existing screenshot"
+                                                />
+                                            </div>
+                                        ))}
                                     </div>
-                                ))}
-                            </div>
-                        </div>
+                                </div>
+                            )}
+
+                            {!!upiScreenshots.length && (
+                                <div className="et-form-gallery">
+                                    <Form.Label>New Screenshots</Form.Label>
+                                    <div className="et-form-gallery__grid">
+                                        {upiScreenshots.map((file, idx) => (
+                                            <div
+                                                key={`${file.name}-${file.lastModified}-${idx}`}
+                                                className="et-form-gallery__item"
+                                            >
+                                                <img
+                                                    src={previewUrls[idx]}
+                                                    alt={`UPI Screenshot ${idx + 1}`}
+                                                    loading="lazy"
+                                                />
+                                                <CloseButton
+                                                    className="et-form-gallery__remove"
+                                                    onClick={() => removeNewImage(idx)}
+                                                    aria-label="Remove new screenshot"
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </>
                     )}
                 </>
             )}

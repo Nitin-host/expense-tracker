@@ -550,7 +550,7 @@ export function OverlayTrigger({ trigger = 'click', rootClose, placement = 'bott
     const placementClass =
         placement === 'bottom-start'
             ? 'left-0 top-[calc(100%+0.35rem)]'
-            : 'right-0 top-[calc(100%+0.35rem)]';
+            : 'right-0 top-[calc(100%+0.35rem)] max-w-[min(92vw,320px)]';
 
     return (
         <div className="relative inline-flex" ref={wrapRef}>
