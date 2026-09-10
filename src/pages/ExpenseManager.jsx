@@ -19,6 +19,7 @@ import { SkeletonTablePage } from '../components/Skeleton';
 
 const ExpenseForm = lazy(() => import('./ExpenseForm'));
 const AddPaymentForm = lazy(() => import('./AddPaymentForm'));
+const EditPaymentForm = lazy(() => import('./EditPaymentForm'));
 
 function ExpenseManager() {
     const { id: solutionId } = useParams();
@@ -46,6 +47,18 @@ function ExpenseManager() {
         urls: [],
         index: 0,
         title: '',
+    });
+    const [editPaymentModal, setEditPaymentModal] = useState({
+        show: false,
+        expense: null,
+        paymentIndex: null,
+    });
+    const [removePaymentModal, setRemovePaymentModal] = useState({
+        show: false,
+        expense: null,
+        paymentIndex: null,
+        payment: null,
+        removing: false,
     });
     const [deleteModal, setDeleteModal] = useState({ show: false, expense: null });
 
@@ -223,6 +236,69 @@ function ExpenseManager() {
         }));
     };
 
+    const refreshAfterPaymentChange = (updatedExpense) => {
+        if (updatedExpense) {
+            setHistoryModal((prev) =>
+                prev.show ? { ...prev, loading: false, expense: updatedExpense } : prev
+            );
+        }
+        fetchExpenses(1, { append: false });
+    };
+
+    const openEditPayment = (expense, paymentIndex) => {
+        setEditPaymentModal({ show: true, expense, paymentIndex });
+    };
+
+    const closeEditPayment = () =>
+        setEditPaymentModal({ show: false, expense: null, paymentIndex: null });
+
+    const handleEditPaymentSuccess = (updatedExpense) => {
+        closeEditPayment();
+        refreshAfterPaymentChange(updatedExpense);
+    };
+
+    const openRemovePayment = (expense, paymentIndex, payment) => {
+        setRemovePaymentModal({
+            show: true,
+            expense,
+            paymentIndex,
+            payment,
+            removing: false,
+        });
+    };
+
+    const closeRemovePayment = () =>
+        setRemovePaymentModal({
+            show: false,
+            expense: null,
+            paymentIndex: null,
+            payment: null,
+            removing: false,
+        });
+
+    const handleRemovePayment = async () => {
+        const { expense, paymentIndex, payment } = removePaymentModal;
+        if (!expense?._id || paymentIndex == null || !payment) return;
+
+        setRemovePaymentModal((prev) => ({ ...prev, removing: true }));
+        try {
+            const res = await api.delete(
+                `/expense/${expense._id}/payments/${paymentIndex}`,
+                { params: { paidAmount: payment.paidAmount } }
+            );
+            notifySuccess('Payment removed from history.');
+            closeRemovePayment();
+            refreshAfterPaymentChange(res.data.expense);
+        } catch (err) {
+            setRemovePaymentModal((prev) => ({ ...prev, removing: false }));
+            notifyError(
+                err.response?.data?.error?.message ||
+                    err.response?.data?.message ||
+                    'Failed to remove payment'
+            );
+        }
+    };
+
     const formatMoney = (value) => `₹${Number(value || 0).toFixed(2)}`;
 
     const formatPaymentBreakdown = (expense) => {
@@ -344,9 +420,9 @@ function ExpenseManager() {
 
     const closeAddPayment = () => setPaymentModal({ show: false, expense: null });
 
-    const handlePaymentSuccess = () => {
+    const handlePaymentSuccess = (updatedExpense) => {
         closeAddPayment();
-        fetchExpenses(1, { append: false });
+        refreshAfterPaymentChange(updatedExpense);
     };
 
     const handleDelete = async () => {
@@ -601,6 +677,39 @@ function ExpenseManager() {
                                                     ))}
                                                 </div>
                                             )}
+                                            {canEdit && (
+                                                <div className="et-payment-history__item-actions">
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline-primary"
+                                                        size="sm"
+                                                        className="touch-btn"
+                                                        onClick={() =>
+                                                            openEditPayment(
+                                                                historyModal.expense,
+                                                                index
+                                                            )
+                                                        }
+                                                    >
+                                                        Edit
+                                                    </Button>
+                                                    <Button
+                                                        type="button"
+                                                        variant="danger"
+                                                        size="sm"
+                                                        className="touch-btn"
+                                                        onClick={() =>
+                                                            openRemovePayment(
+                                                                historyModal.expense,
+                                                                index,
+                                                                payment
+                                                            )
+                                                        }
+                                                    >
+                                                        Remove
+                                                    </Button>
+                                                </div>
+                                            )}
                                         </li>
                                     );
                                 })}
@@ -698,6 +807,64 @@ function ExpenseManager() {
                     </Modal.Body>
                 </Modal>
             )}
+
+            {editPaymentModal.show && editPaymentModal.expense && (
+                <Modal show={editPaymentModal.show} onHide={closeEditPayment} centered fullscreen="sm-down">
+                    <Modal.Header closeButton>
+                        <Modal.Title>
+                            Edit Payment{' '}
+                            {editPaymentModal.paymentIndex != null
+                                ? `#${editPaymentModal.paymentIndex + 1}`
+                                : ''}
+                        </Modal.Title>
+                    </Modal.Header>
+                    <Modal.Body>
+                        <Suspense fallback={<div className="p-3 text-muted">Loading form…</div>}>
+                            <EditPaymentForm
+                                expense={editPaymentModal.expense}
+                                paymentIndex={editPaymentModal.paymentIndex}
+                                onSuccess={handleEditPaymentSuccess}
+                                onCancel={closeEditPayment}
+                            />
+                        </Suspense>
+                    </Modal.Body>
+                </Modal>
+            )}
+
+            <Modal
+                show={removePaymentModal.show}
+                onHide={closeRemovePayment}
+                centered
+            >
+                <Modal.Header closeButton>
+                    <Modal.Title>Remove payment?</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    Remove{' '}
+                    <strong>
+                        {formatMoney(removePaymentModal.payment?.paidAmount)}{' '}
+                        {String(removePaymentModal.payment?.paymentMethod || '').toUpperCase()}
+                    </strong>{' '}
+                    from <strong>{removePaymentModal.expense?.name}</strong>? Paid and pending
+                    totals will update. UPI screenshots for this installment will be deleted.
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button
+                        variant="secondary"
+                        onClick={closeRemovePayment}
+                        disabled={removePaymentModal.removing}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="danger"
+                        onClick={handleRemovePayment}
+                        disabled={removePaymentModal.removing}
+                    >
+                        {removePaymentModal.removing ? 'Removing…' : 'Remove'}
+                    </Button>
+                </Modal.Footer>
+            </Modal>
 
             <Modal
                 show={deleteModal.show}
