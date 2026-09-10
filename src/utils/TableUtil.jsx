@@ -161,10 +161,16 @@ function MobileCard({
             </div>
 
             {visibleActions.length > 0 && (
-                <footer className="mobile-data-card__actions">
-                    {visibleActions.map(({ btnTitle, iconComponent: Icon, btnAction, btnClass = '' }) => {
+                <footer
+                    className={`mobile-data-card__actions${
+                        visibleActions.length >= 3 ? ' mobile-data-card__actions--grid' : ''
+                    }`}
+                >
+                    {visibleActions.map(
+                        ({ btnTitle, mobileTitle, iconComponent: Icon, btnAction, btnClass = '' }) => {
                         const isDanger =
                             btnClass.includes('danger') || /delete/i.test(btnTitle);
+                        const label = mobileTitle || btnTitle;
 
                         return (
                             <button
@@ -175,7 +181,7 @@ function MobileCard({
                                 aria-label={btnTitle}
                             >
                                 {Icon && <Icon className="mobile-data-card__action-icon" aria-hidden />}
-                                <span>{btnTitle}</span>
+                                <span>{label}</span>
                             </button>
                         );
                     })}

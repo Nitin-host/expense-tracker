@@ -38,6 +38,8 @@ function CollectedCashManager() {
 
     const { notifySuccess, notifyError } = useAlert();
     const [accessLevel, setAccessLevel] = useState(null);
+    const canEdit = accessLevel === 'owner' || accessLevel === 'editor';
+    const canView = Boolean(accessLevel);
 
     const searchTextRef = useRef(searchText);
     const notifyErrorRef = useRef(notifyError);
@@ -224,14 +226,14 @@ function CollectedCashManager() {
             btnClass: 'btn btn-sm btn-outline-primary',
             iconComponent: FaEdit,
             btnAction: openEditForm,
-            isVisible: () => accessLevel === 'owner' || accessLevel === 'editor',
+            isVisible: () => canEdit,
         },
         {
             btnTitle: 'Delete',
             btnClass: 'btn btn-sm btn-outline-danger',
             iconComponent: FaTrashAlt,
             btnAction: (cash) => setDeleteModal({ show: true, collectedCash: cash }),
-            isVisible: () => accessLevel === 'owner' || accessLevel === 'editor',
+            isVisible: () => canEdit,
         },
     ];
 
@@ -265,19 +267,22 @@ function CollectedCashManager() {
                     <h1 className="page-heading">Collected cash</h1>
                     <p className="page-sub">Budget inflows for this solution.</p>
                 </div>
-                <div className="d-flex flex-wrap gap-2">
-                    {(accessLevel === 'owner' || accessLevel === 'editor') && (
+                <div className="page-header__actions">
+                    {canEdit && (
                         <Button variant="primary" className="touch-btn" onClick={openAddForm}>
                             Add cash
                         </Button>
                     )}
-                    <Button
-                        variant="outline-primary"
-                        size="sm"
-                        onClick={() => fetchAndExport(api, solutionId, 'collected-cash', 'excel')}
-                    >
-                        <FaDownload className="me-1" /> Excel
-                    </Button>
+                    {canView && (
+                        <Button
+                            variant="outline-primary"
+                            size="sm"
+                            className="touch-btn"
+                            onClick={() => fetchAndExport(api, solutionId, 'collected-cash', 'excel')}
+                        >
+                            <FaDownload className="me-1" /> Excel
+                        </Button>
+                    )}
                 </div>
             </div>
 

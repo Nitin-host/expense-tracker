@@ -1,7 +1,15 @@
 import React, { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import TableUtil from '../utils/TableUtil';
 import { Button, Modal } from '../components/ui';
-import { FaEdit, FaTrashAlt, FaEye, FaDownload, FaPlusCircle } from 'react-icons/fa';
+import {
+    FaEdit,
+    FaTrashAlt,
+    FaEye,
+    FaDownload,
+    FaPlusCircle,
+    FaChevronLeft,
+    FaChevronRight,
+} from 'react-icons/fa';
 import { fetchAndExport } from '../utils/export';
 import { formatDate } from '../utils/formatDate';
 import api from '../api/http';
@@ -33,10 +41,19 @@ function ExpenseManager() {
         loading: false,
         expense: null,
     });
+    const [imageViewer, setImageViewer] = useState({
+        show: false,
+        urls: [],
+        index: 0,
+        title: '',
+    });
     const [deleteModal, setDeleteModal] = useState({ show: false, expense: null });
 
     const { notifySuccess, notifyError } = useAlert();
     const [accessLevel, setAccessLevel] = useState(null);
+
+    const canEdit = accessLevel === 'owner' || accessLevel === 'editor';
+    const canView = Boolean(accessLevel);
 
     const filtersRef = useRef(filters);
     const searchTextRef = useRef(searchText);
@@ -178,17 +195,49 @@ function ExpenseManager() {
     const closeHistoryModal = () =>
         setHistoryModal({ show: false, loading: false, expense: null });
 
+    const openImageViewer = (urls, index = 0, title = '') => {
+        const list = (urls || []).filter(Boolean);
+        if (!list.length) return;
+        setImageViewer({
+            show: true,
+            urls: list,
+            index: Math.max(0, Math.min(index, list.length - 1)),
+            title,
+        });
+    };
+
+    const closeImageViewer = () =>
+        setImageViewer({ show: false, urls: [], index: 0, title: '' });
+
+    const showPrevImage = () => {
+        setImageViewer((prev) => ({
+            ...prev,
+            index: prev.index <= 0 ? prev.urls.length - 1 : prev.index - 1,
+        }));
+    };
+
+    const showNextImage = () => {
+        setImageViewer((prev) => ({
+            ...prev,
+            index: prev.index >= prev.urls.length - 1 ? 0 : prev.index + 1,
+        }));
+    };
+
     const formatMoney = (value) => `₹${Number(value || 0).toFixed(2)}`;
 
     const formatPaymentBreakdown = (expense) => {
         const history = expense.paymentHistory;
-        if (Array.isArray(history) && history.length > 0) {
-            return history
-                .map(
-                    (p) =>
-                        `${formatMoney(p.paidAmount)} ${String(p.paymentMethod || 'cash').toUpperCase()}`
-                )
-                .join(' · ');
+        if (Array.isArray(history) && history.length > 1) {
+            const methods = [
+                ...new Set(
+                    history.map((p) => String(p.paymentMethod || 'cash').toUpperCase())
+                ),
+            ];
+            return `${history.length} payments · ${methods.join('+')}`;
+        }
+        if (Array.isArray(history) && history.length === 1) {
+            const p = history[0];
+            return `${formatMoney(p.paidAmount)} ${String(p.paymentMethod || 'cash').toUpperCase()}`;
         }
         const methods = expense.paymentMethods || expense.payments || [];
         if (Array.isArray(methods) && methods.length) {
@@ -317,18 +366,21 @@ function ExpenseManager() {
     const actions = [
         {
             btnTitle: 'History',
+            mobileTitle: 'History',
             btnClass: 'btn btn-sm btn-outline-info',
             iconComponent: FaEye,
             btnAction: openHistoryModal,
-            isVisible: () => true,
+            // Any solution member (owner / editor / viewer) can review history
+            isVisible: () => canView,
         },
         {
             btnTitle: 'Add Payment',
+            mobileTitle: 'Pay',
             btnClass: 'btn btn-sm btn-outline-primary',
             iconComponent: FaPlusCircle,
             btnAction: openAddPayment,
             isVisible: (expense) => {
-                if (!(accessLevel === 'owner' || accessLevel === 'editor')) return false;
+                if (!canEdit) return false;
                 // Hide when bill is fully paid (amount matches paid)
                 if (expense.paymentStatus === 'fully_paid') return false;
                 const amount = Number(expense.amount) || 0;
@@ -342,17 +394,19 @@ function ExpenseManager() {
         },
         {
             btnTitle: 'Edit',
+            mobileTitle: 'Edit',
             btnClass: 'btn btn-sm btn-outline-primary',
             iconComponent: FaEdit,
             btnAction: openEditForm,
-            isVisible: () => accessLevel === 'owner' || accessLevel === 'editor',
+            isVisible: () => canEdit,
         },
         {
             btnTitle: 'Delete',
+            mobileTitle: 'Delete',
             btnClass: 'btn btn-sm btn-outline-danger',
             iconComponent: FaTrashAlt,
             btnAction: (expense) => setDeleteModal({ show: true, expense }),
-            isVisible: () => accessLevel === 'owner' || accessLevel === 'editor',
+            isVisible: () => canEdit,
         },
     ];
 
@@ -409,21 +463,23 @@ function ExpenseManager() {
                     <h1 className="page-heading">Expenses</h1>
                     <p className="page-sub">Track payments, pending amounts, and screenshots.</p>
                 </div>
-                <div className="d-flex flex-wrap gap-2 align-items-center">
-                    {(accessLevel === 'owner' || accessLevel === 'editor') && (
+                <div className="page-header__actions">
+                    {canEdit && (
                         <Button variant="primary" className="touch-btn" onClick={openAddForm}>
                             Add Expense
                         </Button>
                     )}
-                    <Button
-                        variant="outline-primary"
-                        size="sm"
-                        className="touch-btn"
-                        onClick={() => fetchAndExport(api, solutionId, 'expenses', 'excel')}
-                        title="Export Excel"
-                    >
-                        <FaDownload className="me-1" /> Excel
-                    </Button>
+                    {canView && (
+                        <Button
+                            variant="outline-primary"
+                            size="sm"
+                            className="touch-btn"
+                            onClick={() => fetchAndExport(api, solutionId, 'expenses', 'excel')}
+                            title="Export Excel"
+                        >
+                            <FaDownload className="me-1" /> Excel
+                        </Button>
+                    )}
                 </div>
             </div>
             <TableUtil
@@ -524,19 +580,24 @@ function ExpenseManager() {
                                             {shots.length > 0 && (
                                                 <div className="et-payment-history__shots">
                                                     {shots.map((url, shotIdx) => (
-                                                        <a
+                                                        <button
                                                             key={`${url}-${shotIdx}`}
-                                                            href={url}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
+                                                            type="button"
                                                             className="et-payment-history__shot"
+                                                            onClick={() =>
+                                                                openImageViewer(
+                                                                    shots,
+                                                                    shotIdx,
+                                                                    `${historyModal.expense.name} · Payment ${index + 1}`
+                                                                )
+                                                            }
                                                         >
                                                             <img
                                                                 src={url}
                                                                 alt={`UPI screenshot ${index + 1}.${shotIdx + 1}`}
                                                                 loading="lazy"
                                                             />
-                                                        </a>
+                                                        </button>
                                                     ))}
                                                 </div>
                                             )}
@@ -549,6 +610,55 @@ function ExpenseManager() {
                                 historyModal.expense.payments.length === 0) && (
                                 <p className="text-muted mb-0">No payments recorded yet.</p>
                             )}
+                        </div>
+                    )}
+                </Modal.Body>
+            </Modal>
+
+            <Modal
+                show={imageViewer.show}
+                onHide={closeImageViewer}
+                size="lg"
+                centered
+                fullscreen="sm-down"
+                className="et-image-viewer-modal"
+            >
+                <Modal.Header closeButton>
+                    <Modal.Title>
+                        {imageViewer.title || 'UPI screenshot'}
+                        {imageViewer.urls.length > 1
+                            ? ` (${imageViewer.index + 1}/${imageViewer.urls.length})`
+                            : ''}
+                    </Modal.Title>
+                </Modal.Header>
+                <Modal.Body className="et-image-viewer">
+                    {imageViewer.urls[imageViewer.index] && (
+                        <img
+                            src={imageViewer.urls[imageViewer.index]}
+                            alt={imageViewer.title || 'UPI screenshot'}
+                            className="et-image-viewer__img"
+                        />
+                    )}
+                    {imageViewer.urls.length > 1 && (
+                        <div className="et-image-viewer__nav">
+                            <Button
+                                type="button"
+                                variant="secondary"
+                                className="touch-btn"
+                                onClick={showPrevImage}
+                                aria-label="Previous screenshot"
+                            >
+                                <FaChevronLeft aria-hidden /> Prev
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="secondary"
+                                className="touch-btn"
+                                onClick={showNextImage}
+                                aria-label="Next screenshot"
+                            >
+                                Next <FaChevronRight aria-hidden />
+                            </Button>
                         </div>
                     )}
                 </Modal.Body>
